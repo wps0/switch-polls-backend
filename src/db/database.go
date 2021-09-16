@@ -110,10 +110,10 @@ func InitDb() {
 func GetOptionExtrasByOptionId(optId int) ([]OptionExtras, error) {
 	res, err := Db.Query("SELECT * FROM "+TABLE_EXTRAS+" WHERE option_id = ?;", optId)
 	if err != nil {
-		return nil, err
+		return make([]OptionExtras, 0), err
 	}
 
-	var extras []OptionExtras
+	var extras = make([]OptionExtras, 0)
 	for res.Next() {
 		var opt OptionExtras
 		var tmp int
@@ -121,7 +121,7 @@ func GetOptionExtrasByOptionId(optId int) ([]OptionExtras, error) {
 
 		if err != nil {
 			log.Println("option extras scan error (optionId:", optId, "): ", err)
-			return nil, err
+			return make([]OptionExtras, 0), err
 		}
 		extras = append(extras, opt)
 	}
@@ -131,10 +131,10 @@ func GetOptionExtrasByOptionId(optId int) ([]OptionExtras, error) {
 func GetOptionsByPollId(pollId int) ([]PollOption, error) {
 	res, err := Db.Query("SELECT * FROM "+TABLE_OPTIONS+" WHERE poll_id = ?;", pollId)
 	if err != nil {
-		return nil, err
+		return make([]PollOption, 0), err
 	}
 
-	var options []PollOption
+	var options = make([]PollOption, 0)
 	for res.Next() {
 		var opt PollOption
 		var tmp int
@@ -142,7 +142,7 @@ func GetOptionsByPollId(pollId int) ([]PollOption, error) {
 
 		if err != nil {
 			log.Println("option scan error (pollId:", pollId, "): ", err)
-			return nil, err
+			return make([]PollOption, 0), err
 		}
 		opt.Extras, _ = GetOptionExtrasByOptionId(opt.Id)
 		options = append(options, opt)
