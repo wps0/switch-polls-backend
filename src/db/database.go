@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS ` + "`" + TABLE_VOTES + "`" + ` (
 )
 
 func InitDb() {
+	log.Println("Initialising database")
 	db, err := sql.Open("mysql", config.Cfg.DbString)
 	if err != nil {
 		panic(err.Error())
@@ -105,6 +106,7 @@ func InitDb() {
 	if err != nil {
 		panic(err)
 	}
+	log.Println("Database initialised")
 }
 
 func GetOptionExtrasByOptionId(optId int) ([]OptionExtras, error) {

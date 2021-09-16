@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"switch-polls-backend/config"
@@ -35,6 +36,10 @@ func PrepareResponse(data interface{}) ([]byte, error) {
 
 func BeforeHandling(w *http.ResponseWriter) {
 	(*w).Header().Set("Content-Type", "application/json")
+	if config.DevMode {
+		(*w).Header().Set("Access-Control-Allow-Origin", "*")
+	}
+	(*w).Header().Set("Access-Control-Allow-Headers", "g-recaptcha-response")
 }
 
 func ToLowerCase(ch uint8) uint8 {
@@ -43,6 +48,12 @@ func ToLowerCase(ch uint8) uint8 {
 		return ch + 32
 	}
 	return ch
+}
+
+var isAlphaRegex = regexp.MustCompile(`^[A-Za-z0-9\-_]+$`)
+
+func IsAlphaWithDashAndUnderscore(s string) bool {
+	return isAlphaRegex.MatchString(s)
 }
 
 func GetHostname() string {

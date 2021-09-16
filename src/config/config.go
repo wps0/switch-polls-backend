@@ -16,10 +16,12 @@ type EmailConfiguration struct {
 }
 
 type WebConfiguration struct {
-	Domain    string
-	Port      uint
-	Protocol  string
-	ApiPrefix string
+	Domain                  string
+	Port                    uint
+	Protocol                string
+	ApiPrefix               string
+	RecaptchaVerifyEndpoint string
+	RecaptchaSecret         string
 }
 
 type Configuration struct {
@@ -31,7 +33,8 @@ type Configuration struct {
 var defaultConfig = Configuration{
 	EmailConfig: EmailConfiguration{},
 	WebConfig: WebConfiguration{
-		ApiPrefix: "/api",
+		ApiPrefix:               "/api",
+		RecaptchaVerifyEndpoint: "https://www.google.com/recaptcha/api/siteverify",
 	},
 	DbString: "root:passwd@tcp(localhost:3306)/mydatabase",
 }
@@ -39,12 +42,14 @@ var defaultConfig = Configuration{
 // flags
 var configPath string
 var createDefaultConfig bool
+var DevMode bool
 
 func InitConfig() {
 	var err error
 	flag.StringVar(&configPath, "cfg", "./config.json", "The path to a config file.")
 	flag.BoolVar(&createDefaultConfig, "d", false, "Indicates whether the default config file should "+
 		"be created. If so, the application terminates after having created it..")
+	flag.BoolVar(&DevMode, "dev", false, "Enable development mode")
 	flag.Parse()
 
 	if createDefaultConfig {

@@ -11,12 +11,16 @@ import (
 
 func PollHandler(w http.ResponseWriter, r *http.Request) {
 	utils.BeforeHandling(&w)
+	if !VerifyRecaptcha(r) {
+		WriteBadRequestResponse(&w)
+		return
+	}
 
 	args := mux.Vars(r)
 	_id, err := strconv.Atoi(args["id"])
 	if err != nil {
 		log.Printf("PollHandler > Error when converting id to a string")
-		w.Write(GetBadRequestResponse(&w))
+		WriteBadRequestResponse(&w)
 		return
 	}
 
