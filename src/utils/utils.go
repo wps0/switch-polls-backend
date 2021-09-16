@@ -14,20 +14,21 @@ func (e *InvalidJson) Error() string {
 	return "JSON is not valid"
 }
 
-func PrepareResponse(data ...interface{}) ([]byte, error) {
+func PrepareResponse(data interface{}) ([]byte, error) {
 	dataJs := strings.Builder{}
-	dataJs.WriteString("{[")
-	for item := range data {
-		js, err := json.Marshal(item)
+	js, err := json.Marshal(data)
 
-		if err != nil {
-			return nil, err
-		}
-		if !json.Valid(js) {
-			return nil, &InvalidJson{}
-		}
+	if err != nil {
+		return nil, err
 	}
-	dataJs.WriteString("]}")
+	if !json.Valid(js) {
+		return nil, &InvalidJson{}
+	}
+	dataJs.Write(js)
+
+	if dataJs.Len() == 0 {
+		dataJs.WriteString("{}")
+	}
 
 	return []byte(dataJs.String()), nil
 }

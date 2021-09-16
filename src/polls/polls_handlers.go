@@ -21,7 +21,7 @@ func PollHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res, err := db.GetPollById(_id)
-	if err != nil || res.Id != _id {
+	if err != nil || res == nil || res.Id != _id {
 		w.WriteHeader(http.StatusNotFound)
 		resp, _ := utils.PrepareResponse("the poll with the given id was not found")
 		w.Write(resp)

@@ -39,6 +39,6 @@ func main() {
 
 	// start http
 	http.Handle("/", r)
-	log.Printf("Listening at %s://%s\n", config.Cfg.WebConfig.Protocol, utils.GetHostname())
+	log.Printf("Listening at %s://%s%s\n", config.Cfg.WebConfig.Protocol, utils.GetHostname(), config.Cfg.WebConfig.ApiPrefix)
 	log.Fatal(http.ListenAndServe(utils.GetHostname(), nil))
 }

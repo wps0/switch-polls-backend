@@ -25,7 +25,15 @@ type WebConfiguration struct {
 type Configuration struct {
 	EmailConfig EmailConfiguration
 	WebConfig   WebConfiguration
-	DbString string
+	DbString    string
+}
+
+var defaultConfig = Configuration{
+	EmailConfig: EmailConfiguration{},
+	WebConfig: WebConfiguration{
+		ApiPrefix: "/api",
+	},
+	DbString: "root:passwd@tcp(localhost:3306)/mydatabase",
 }
 
 // flags
@@ -35,7 +43,7 @@ var createDefaultConfig bool
 func InitConfig() {
 	var err error
 	flag.StringVar(&configPath, "cfg", "./config.json", "The path to a config file.")
-	flag.BoolVar(&createDefaultConfig, "c", false, "Indicates whether the default config file should "+
+	flag.BoolVar(&createDefaultConfig, "d", false, "Indicates whether the default config file should "+
 		"be created. If so, the application terminates after having created it..")
 	flag.Parse()
 
@@ -47,7 +55,7 @@ func InitConfig() {
 			return
 		}
 		var data []byte
-		data, err = json.MarshalIndent(Configuration{}, "", "  ")
+		data, err = json.MarshalIndent(defaultConfig, "", "  ")
 		if err != nil {
 			log.Fatalf("Failed to create config file! Error: %s\n", err)
 			return
