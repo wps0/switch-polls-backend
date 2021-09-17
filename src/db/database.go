@@ -290,12 +290,12 @@ FROM `+TABLE_VOTES+` V INNER JOIN `+TABLE_USERS+`
 		U ON V.user_id = U.id
 	INNER JOIN `+TABLE_OPTIONS+` O ON
 		V.option_id = O.id
-WHERE O.poll_id = ? AND V.confirmed = 1 AND U.id = ?;`, userId, pollId)
+WHERE O.poll_id = ? AND V.confirmed = 1 AND U.id = ?;`, pollId, userId)
 	if err != nil {
 		log.Printf("error when checking if user `%d` has already voted on poll `%d`: %v", userId, pollId, err)
 		return false, err
 	}
-	return res.Next(), nil
+	return res.Next(), res.Err()
 }
 
 func CheckIfUserExists(email string) bool {

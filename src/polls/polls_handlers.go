@@ -81,7 +81,8 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if voted, err := db.CheckIfUserHasAlreadyVoted(email, pollId); voted {
+	voted, err := db.CheckIfUserHasAlreadyVoted(email, pollId)
+	if voted {
 		w.WriteHeader(http.StatusForbidden)
 		w.Write([]byte("user has already voted"))
 		return
@@ -128,7 +129,8 @@ func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := VerifyToken(token); err != nil {
+	err := VerifyToken(token)
+	if err != nil {
 		log.Println("invalid token: ", err)
 		WriteBadRequestResponse(&w)
 		return
