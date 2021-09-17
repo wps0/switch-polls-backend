@@ -39,10 +39,6 @@ func PollHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(resp)
 }
 
-// weryfikacja przez maila (6h):
-//  - wysyłanie powiadomień (3.5h) -14:15
-//  - weryfikacja legitności gdy user kliknie
-//  - redirect do strony wyjściowej
 // votes endpoint zwracający w json ilość głosów per opcja (2h)
 // wyświetlanie tych głosów na frontendzie (6h)
 
@@ -152,9 +148,16 @@ func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	vote, err := db.GetVoteById(cnf.VoteId)
+	voteId := 0
+	if err != nil {
+		log.Println("vote by id error", err)
+		voteId = vote.Id
+	}
+
 	res, _ := utils.PrepareResponse("Zarejestrowano glos!")
+	w.Header().Set("Location", config.Cfg.WebConfig.TokenVerificationRedirectLocation+strconv.Itoa(voteId))
 	w.WriteHeader(http.StatusSeeOther)
-	w.Header().Set("Location", config.Cfg.WebConfig.TokenVerificationRedirectLocation)
 	w.Write(res)
 }
 
