@@ -48,6 +48,7 @@ func VerifyRecaptcha(rq *http.Request) bool {
 	origin := rq.Header.Get("Origin")
 	token := rq.Header.Get("g-recaptcha-response")
 	if len(token) == 0 || len(token) > 1024 || len(origin) > 384 || !utils.IsAlphaWithDashAndUnderscore(token) {
+		log.Printf("Required captcha header not found")
 		return false
 	}
 	data := url.Values{}

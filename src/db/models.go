@@ -35,3 +35,13 @@ type Confirmation struct {
 	VoteId     int
 	CreateDate int64
 }
+
+type ResultsSummary struct {
+	Summary []VoteResult `json:"summary"`
+}
+
+type VoteResult struct {
+	Id      int    `json:"id"`
+	Content string `json:"content"`
+	Count   int    `json:"count"`
+}

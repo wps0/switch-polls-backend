@@ -5,7 +5,6 @@ import (
 	"errors"
 	_ "github.com/go-sql-driver/mysql"
 	"log"
-	"strconv"
 	"switch-polls-backend/config"
 	"switch-polls-backend/utils"
 	"time"
@@ -134,6 +133,7 @@ func GetOptionExtrasByOptionId(optId int) ([]OptionExtras, error) {
 	if err != nil {
 		return make([]OptionExtras, 0), err
 	}
+	defer res.Close()
 
 	var extras = make([]OptionExtras, 0)
 	for res.Next() {
@@ -155,6 +155,7 @@ func GetOptionsByPollId(pollId int) ([]PollOption, error) {
 	if err != nil {
 		return make([]PollOption, 0), err
 	}
+	defer res.Close()
 
 	var options = make([]PollOption, 0)
 	for res.Next() {
@@ -173,18 +174,12 @@ func GetOptionsByPollId(pollId int) ([]PollOption, error) {
 }
 
 func GetPollById(id int) (*Poll, error) {
-	res, err := Db.Query("SELECT * FROM "+TABLE_POLLS+" WHERE id = ?;", id)
+	var poll Poll
+	err := Db.QueryRow("SELECT * FROM "+TABLE_POLLS+" WHERE id = ?;", id).Scan(&poll.Id, &poll.Title, &poll.Description, &poll.CreateTime)
 	if err != nil {
 		return nil, err
 	}
 
-	var poll Poll
-	if res.Next() {
-		err = res.Scan(&poll.Id, &poll.Title, &poll.Description, &poll.CreateTime)
-		if err != nil {
-			return nil, err
-		}
-	}
 	poll.Options, err = GetOptionsByPollId(id)
 	if err != nil {
 		log.Println("Get options by poll id error: ", err)
@@ -195,15 +190,8 @@ func GetPollById(id int) (*Poll, error) {
 }
 
 func GetPollIdByOptionId(id int) (int, error) {
-	res, err := Db.Query("SELECT poll_id FROM "+TABLE_OPTIONS+" WHERE id = ?;", id)
-	if err != nil {
-		return 0, err
-	}
-	if !res.Next() {
-		return 0, errors.New("option id " + strconv.Itoa(id) + " not found")
-	}
 	var pollId int
-	err = res.Scan(&pollId)
+	err := Db.QueryRow("SELECT poll_id FROM "+TABLE_OPTIONS+" WHERE id = ?;", id).Scan(&pollId)
 	if err != nil {
 		return 0, err
 	}
@@ -212,6 +200,7 @@ func GetPollIdByOptionId(id int) (int, error) {
 
 func GetUserIdByEmail(email string) (int, error) {
 	res, err := Db.Query("SELECT id FROM " + TABLE_USERS + " WHERE email = '" + email + "';")
+	defer res.Close()
 	if err != nil {
 		log.Println("get user by id error", err)
 		return 0, err
@@ -236,39 +225,45 @@ func GetUserIdByEmail(email string) (int, error) {
 }
 
 func GetVoteById(id int) (*PollVote, error) {
-	res, err := Db.Query("SELECT * FROM "+TABLE_VOTES+" WHERE id = ?;", id)
+	var vote PollVote
+	err := Db.QueryRow("SELECT * FROM "+TABLE_VOTES+" WHERE id = ?;", id).Scan(&vote.Id, &vote.UserId, &vote.OptionId, &vote.Confirmed, &vote.ConfirmedAt, &vote.CreateDate)
 	if err != nil {
 		return nil, err
-	}
-
-	var vote PollVote
-	if res.Next() {
-		err = res.Scan(&vote.Id, &vote.UserId, &vote.OptionId, &vote.Confirmed, &vote.ConfirmedAt, &vote.CreateDate)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return &vote, nil
-
 }
 
 func GetConfirmationByToken(token string) (*Confirmation, error) {
-	res, err := Db.Query("SELECT * FROM " + TABLE_CONFIRMATIONS + " WHERE token = '" + token + "';")
+	var cnf Confirmation
+	err := Db.QueryRow("SELECT * FROM "+TABLE_CONFIRMATIONS+" WHERE token = '"+token+"';").Scan(&cnf.Token, &cnf.VoteId, &cnf.CreateDate)
 	if err != nil {
 		return nil, err
 	}
 
-	var cnf Confirmation
-	if res.Next() {
-		err = res.Scan(&cnf.Token, &cnf.VoteId, &cnf.CreateDate)
+	return &cnf, nil
+}
+
+func PrepareResultsSummary(pollId int) (*ResultsSummary, error) {
+	res, err := Db.Query(`
+SELECT O.id, O.content, COUNT(*) 
+FROM `+TABLE_VOTES+` V INNER JOIN `+TABLE_OPTIONS+` O ON V.option_id = O.id 
+WHERE O.poll_id = ? AND confirmed = 1 GROUP BY O.id;`, pollId)
+	if err != nil {
+		log.Println("prepare results error", err)
+		return nil, err
+	}
+	defer res.Close()
+	var summary = make([]VoteResult, 0)
+	for res.Next() {
+		var result VoteResult
+		err = res.Scan(&result.Id, &result.Content, &result.Count)
 		if err != nil {
 			return nil, err
 		}
+		summary = append(summary, result)
 	}
-
-	return &cnf, nil
-
+	return &ResultsSummary{summary}, nil
 }
 
 func CheckIfUserHasAlreadyVoted(userEmail string, pollId int) (bool, error) {
@@ -295,6 +290,7 @@ WHERE O.poll_id = ? AND V.confirmed = 1 AND U.id = ?;`, pollId, userId)
 		log.Printf("error when checking if user `%d` has already voted on poll `%d`: %v", userId, pollId, err)
 		return false, err
 	}
+	defer res.Close()
 	return res.Next(), res.Err()
 }
 
@@ -304,6 +300,7 @@ func CheckIfUserExists(email string) bool {
 		log.Println("check if user exists error", err)
 		return false
 	}
+	defer res.Close()
 	return res.Next()
 }
 

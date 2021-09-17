@@ -163,19 +163,30 @@ func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(res)
 }
 
-//func PollVotesHandler(w http.ResponseWriter, r *http.Request) {
-//	utils.BeforeHandling(&w)
-//	user := auth.AuthMgr.GetLoggedInUser(&w, r)
-//	if user == nil {
-//		return
-//	}
-//	args := mux.Vars(r)
-//	id, _ := strconv.Atoi(args["id"])
-//	poll := PollsMgr.GetPollById(uint(id))
-//	if poll == nil {
-//		w.WriteHeader(http.StatusNotFound)
-//		w.Write(utils.PrepareResponseIgnoreErrors("poll not found"))
-//		return
-//	}
-//	w.Write(utils.PrepareOKResponseIgnoreErrors(poll.PrepareVotesSummary()))
-//}
+func PollResultsHandler(w http.ResponseWriter, r *http.Request) {
+	utils.BeforeHandling(&w)
+	if !VerifyRecaptcha(r) {
+		WriteBadRequestResponse(&w)
+		return
+	}
+
+	args := mux.Vars(r)
+	id, _ := strconv.Atoi(args["id"])
+	poll, err := db.GetPollById(id)
+	if err != nil {
+		WriteBadRequestResponse(&w)
+		return
+	}
+	if poll == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	summary, err := db.PrepareResultsSummary(poll.Id)
+	if err != nil {
+		log.Println("results summary error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	resp, _ := utils.PrepareResponse(summary)
+	w.Write(resp)
+}
