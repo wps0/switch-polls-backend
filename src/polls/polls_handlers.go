@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"switch-polls-backend/config"
 	"switch-polls-backend/db"
 	"switch-polls-backend/utils"
 )
@@ -45,10 +46,10 @@ func PollHandler(w http.ResponseWriter, r *http.Request) {
 // votes endpoint zwracający w json ilość głosów per opcja (2h)
 // wyświetlanie tych głosów na frontendzie (6h)
 
-// db cleanup raz na x h - usuwa, gdy zachodzi jakis warunek
+// db cleanup raz na x h - usuwa, gdy zachodzi jakis warunek (np. uplynal czas od stworzenia / user juz potwierdzil)
 
 // nie mozna potwierdzic, gdy user juz glosowal
-//  /confirm_vote?id=UUID&token=XD
+//  /confirm_vote?token=UUID
 
 func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 	utils.BeforeHandling(&w)
@@ -85,8 +86,8 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if voted, err := db.CheckIfUserHasAlreadyVoted(email, pollId); voted {
-		w.Write([]byte("user has already voted"))
 		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte("user has already voted"))
 		return
 	} else if err != nil {
 		log.Println("check if user has voted error", err)
@@ -95,6 +96,27 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// OK
+	voteId, err := db.InsertVote(email, reqData.OptionId)
+	if err != nil {
+		log.Printf("cannot insert the vote of user %s on poll option %d. error: %v", email, reqData.OptionId, err)
+		WriteBadRequestResponse(&w)
+		return
+	}
+	token, err := CreateVoteToken(voteId)
+
+	template := utils.FillEmailTemplate(utils.EmailTemplateValues{
+		Receiver:    email,
+		ServiceName: "SWITCH POLLS",
+		VoteOption:  strconv.Itoa(reqData.OptionId),
+		PollTitle:   strconv.Itoa(pollId),
+		Link:        token,
+	})
+	err = utils.SendEmail(&config.Cfg.EmailConfig, config.Cfg.EmailConfig.EmailSubject, template, email)
+	if err != nil {
+		log.Println("cannot send an email to "+email, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusNoContent)
 }

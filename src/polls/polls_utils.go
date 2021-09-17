@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 	"switch-polls-backend/config"
+	"switch-polls-backend/db"
 	"switch-polls-backend/utils"
 )
 
@@ -39,7 +40,7 @@ func UsernameToEmail(username string) (string, error) {
 	if !utils.IsAlpha(username) {
 		return "", errors.New("username can only contain alphanumeric characters")
 	}
-	return username + config.Cfg.EmailConfig.OrganizationDomain, nil
+	return username + "@" + config.Cfg.EmailConfig.OrganizationDomain, nil
 }
 
 func VerifyRecaptcha(rq *http.Request) bool {
@@ -77,4 +78,9 @@ func VerifyRecaptcha(rq *http.Request) bool {
 		log.Println("Captcha verification error(s): ", resp.ErrorCodes)
 	}
 	return resp.Success
+}
+
+func CreateVoteToken(voteId int) (string, error) {
+	token := utils.GetNewToken()
+	return token, db.InsertToken(token, voteId)
 }

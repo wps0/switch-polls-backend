@@ -11,13 +11,15 @@ import (
 var Cfg *Configuration
 
 type EmailConfiguration struct {
-	OrganizationDomain string
-	SenderEmail        string
-	SmtpHost           string
-	SmtpPort           int
-	SenderEmailPasswd  string
-	EmailTemplatePath  string
-	EmailTemplate      string `json:"-"`
+	OrganizationDomain    string
+	SenderEmail           string
+	SenderMailboxUsername string
+	SmtpHost              string
+	SmtpPort              int
+	SenderEmailPasswd     string
+	EmailSubject          string
+	EmailTemplatePath     string
+	EmailTemplate         string `json:"-"`
 }
 
 type WebConfiguration struct {

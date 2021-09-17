@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"bytes"
 	"encoding/json"
+	"html/template"
 	"log"
 	"net/http"
 	"net/smtp"
@@ -9,9 +11,19 @@ import (
 	"strconv"
 	"strings"
 	"switch-polls-backend/config"
+
+	"github.com/google/uuid"
 )
 
 type InvalidJson struct{}
+
+type EmailTemplateValues struct {
+	Receiver    string
+	ServiceName string
+	VoteOption  string
+	PollTitle   string
+	Link        string
+}
 
 func (e *InvalidJson) Error() string {
 	return "JSON is not valid"
@@ -77,13 +89,32 @@ func VerifyUsername(s string) bool {
 }
 
 func SendEmail(conf *config.EmailConfiguration, subject string, msg string, receiver string) error {
-	msg = "Subject: " + subject + "\nMIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n" + msg
+	msg = "Subject: " + subject + "\nFrom: " + conf.SenderEmail + "\nMIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n" + msg
 	receiversList := []string{receiver}
 
-	auth := smtp.PlainAuth("", conf.SenderEmail, conf.SenderEmailPasswd, conf.SmtpHost)
+	auth := smtp.PlainAuth("", conf.SenderMailboxUsername, conf.SenderEmailPasswd, conf.SmtpHost)
 	err := smtp.SendMail(conf.SmtpHost+":"+strconv.Itoa(conf.SmtpPort), auth, conf.SenderEmail, receiversList, []byte(msg))
-	if err != nil {
-		log.Println(err)
-	}
 	return err
+}
+
+func GetNewToken() string {
+	return uuid.NewString()
+}
+
+func FillEmailTemplate(contents EmailTemplateValues) string {
+	var err error
+
+	temp := template.New("email_temp")
+	temp, err = temp.Parse(config.Cfg.EmailConfig.EmailTemplate)
+	if err != nil {
+		log.Printf("template parse error: %s\n", err)
+		return ""
+	}
+	var buf bytes.Buffer
+	err = temp.Execute(&buf, &contents)
+	if err != nil {
+		log.Printf("template execute error: %s\n", err)
+		return ""
+	}
+	return buf.String()
 }
