@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"switch-polls-backend/config"
 	"switch-polls-backend/utils"
+	"time"
 )
 
 var Db *sql.DB
@@ -27,7 +28,7 @@ const (
 CREATE TABLE IF NOT EXISTS ` + "`" + TABLE_USERS + "`" + ` (
 	id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
 	email VARCHAR(128) NOT NULL,
-	create_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+	create_date BIGINT NOT NULL DEFAULT UNIX_TIMESTAMP(),
 	INDEX ix_users_email(email)
 );`
 	CREATE_TABLE_POLLS_QUERY = `
@@ -35,7 +36,7 @@ CREATE TABLE IF NOT EXISTS ` + "`" + TABLE_POLLS + "`" + ` (
 	id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
 	title VARCHAR(256) NOT NULL,
 	description VARCHAR(2048) NULL,
-	create_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP()
+	create_date BIGINT NOT NULL DEFAULT UNIX_TIMESTAMP()
 );`
 	CREATE_TABLE_OPTIONS_QUERY = `
 CREATE TABLE IF NOT EXISTS ` + "`" + TABLE_OPTIONS + "`" + ` (
@@ -67,8 +68,8 @@ CREATE TABLE IF NOT EXISTS ` + "`" + TABLE_VOTES + "`" + ` (
 	user_id INT NULL,
 	option_id INT NULL,
 	confirmed BOOLEAN DEFAULT false,
-	confirmed_at TIMESTAMP NULL,
-	create_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+	confirmed_at BIGINT NULL,
+	create_date BIGINT DEFAULT UNIX_TIMESTAMP(),
 	INDEX fk_votes_usr_ix (user_id),
 	INDEX fk_votes_opt_ix (option_id),
 	FOREIGN KEY fk_votes_usr_ix(user_id)
@@ -84,7 +85,7 @@ CREATE TABLE IF NOT EXISTS ` + "`" + TABLE_VOTES + "`" + ` (
 CREATE TABLE IF NOT EXISTS ` + "`" + TABLE_CONFIRMATIONS + "`" + ` (
 	token VARCHAR(192) NOT NULL PRIMARY KEY,
 	vote_id INT NOT NULL,
-	create_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+	create_date BIGINT DEFAULT UNIX_TIMESTAMP(),
 	INDEX fk_confirmations_vote_id_ix (vote_id),
 	FOREIGN KEY fk_confirmations_vote_id_ix(vote_id)
         REFERENCES ` + TABLE_VOTES + `(id)
@@ -217,7 +218,13 @@ func GetUserIdByEmail(email string) (int, error) {
 	}
 	if !res.Next() {
 		log.Println("get user by id user does not exist")
-		return 0, errors.New("user with the specified email was not found")
+		userId, err := InsertUser(email)
+		if err != nil {
+			log.Println("cannot create user", err)
+			return 0, err
+		}
+		log.Printf("created new user (id: %d, email: %s)", userId, email)
+		return userId, nil
 	}
 	var id int
 	err = res.Scan(&id)
@@ -228,10 +235,54 @@ func GetUserIdByEmail(email string) (int, error) {
 	return id, nil
 }
 
+func GetVoteById(id int) (*PollVote, error) {
+	res, err := Db.Query("SELECT * FROM "+TABLE_VOTES+" WHERE id = ?;", id)
+	if err != nil {
+		return nil, err
+	}
+
+	var vote PollVote
+	if res.Next() {
+		err = res.Scan(&vote.Id, &vote.UserId, &vote.OptionId, &vote.Confirmed, &vote.ConfirmedAt, &vote.CreateDate)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &vote, nil
+
+}
+
+func GetConfirmationByToken(token string) (*Confirmation, error) {
+	res, err := Db.Query("SELECT * FROM " + TABLE_CONFIRMATIONS + " WHERE token = '" + token + "';")
+	if err != nil {
+		return nil, err
+	}
+
+	var cnf Confirmation
+	if res.Next() {
+		err = res.Scan(&cnf.Token, &cnf.VoteId, &cnf.CreateDate)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &cnf, nil
+
+}
+
 func CheckIfUserHasAlreadyVoted(userEmail string, pollId int) (bool, error) {
 	if !utils.IsAlphaWithAtAndDot(userEmail) {
 		return false, errors.New("invalid email format")
 	}
+	userId, err := GetUserIdByEmail(userEmail)
+	if err != nil {
+		return false, err
+	}
+	return CheckIfUserHasAlreadyVotedById(userId, pollId)
+}
+
+func CheckIfUserHasAlreadyVotedById(userId int, pollId int) (bool, error) {
 	res, err := Db.Query(`
 SELECT
 	V.confirmed
@@ -239,9 +290,9 @@ FROM `+TABLE_VOTES+` V INNER JOIN `+TABLE_USERS+`
 		U ON V.user_id = U.id
 	INNER JOIN `+TABLE_OPTIONS+` O ON
 		V.option_id = O.id
-WHERE O.poll_id = ? AND V.confirmed = 1 AND U.email = '`+userEmail+`';`, pollId)
+WHERE O.poll_id = ? AND V.confirmed = 1 AND U.id = ?;`, userId, pollId)
 	if err != nil {
-		log.Printf("error when checking if user `%s` has already voted on poll `%d`: %v", userEmail, pollId, err)
+		log.Printf("error when checking if user `%d` has already voted on poll `%d`: %v", userId, pollId, err)
 		return false, err
 	}
 	return res.Next(), nil
@@ -294,6 +345,17 @@ func InsertVote(userEmail string, optId int) (int, error) {
 
 func InsertToken(token string, voteId int) error {
 	res, err := Db.Exec("INSERT INTO "+TABLE_CONFIRMATIONS+"(token, vote_id) VALUES ('"+token+"', ?);", voteId)
+	if err != nil {
+		return err
+	}
+	if rows, err := res.RowsAffected(); err != nil || rows != 1 {
+		return err
+	}
+	return err
+}
+
+func ChangeConfirmationStatus(voteId int, newStatus bool) error {
+	res, err := Db.Exec("UPDATE "+TABLE_VOTES+" SET confirmed = ?, confirmed_at = ? WHERE id = ?;", newStatus, time.Now().Unix(), voteId)
 	if err != nil {
 		return err
 	}

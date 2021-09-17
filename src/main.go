@@ -46,6 +46,8 @@ func main() {
 	rPolls.HandleFunc("/{id:[0-9]+}", HandleCORSOptionsRequest).Methods("OPTIONS")
 	rPolls.HandleFunc("/vote", polls.PollVoteHandler).Methods("POST")
 	rPolls.HandleFunc("/vote", HandleCORSOptionsRequest).Methods("OPTIONS")
+	// chyba ok ten regex?
+	rPolls.HandleFunc("/confirm_vote/{token:[A-Za-z0-9\\-]+}", polls.PollConfirmHandler).Methods("GET")
 
 	// start http
 	http.Handle("/", r)

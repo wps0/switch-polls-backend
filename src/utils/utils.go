@@ -65,6 +65,7 @@ func ToLowerCase(ch uint8) uint8 {
 }
 
 var isAlphaDashUnderscoreRegex = regexp.MustCompile(`^[A-Za-z0-9\-_]+$`)
+var isAlphaDashRegex = regexp.MustCompile(`^[A-Za-z0-9\-]+$`)
 var isAlphaAtDotRegex = regexp.MustCompile(`^[A-Za-z0-9@.]+$`)
 var isAlphaRegex = regexp.MustCompile(`^[A-Za-z0-9]+$`)
 
@@ -74,6 +75,10 @@ func IsAlpha(s string) bool {
 
 func IsAlphaWithAtAndDot(s string) bool {
 	return isAlphaAtDotRegex.MatchString(s)
+}
+
+func IsAlphaWithDash(s string) bool {
+	return isAlphaDashRegex.MatchString(s)
 }
 
 func IsAlphaWithDashAndUnderscore(s string) bool {

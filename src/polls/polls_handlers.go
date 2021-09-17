@@ -40,7 +40,7 @@ func PollHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // weryfikacja przez maila (6h):
-//  - wysyłanie powiadomień
+//  - wysyłanie powiadomień (3.5h) -14:15
 //  - weryfikacja legitności gdy user kliknie
 //  - redirect do strony wyjściowej
 // votes endpoint zwracający w json ilość głosów per opcja (2h)
@@ -49,7 +49,6 @@ func PollHandler(w http.ResponseWriter, r *http.Request) {
 // db cleanup raz na x h - usuwa, gdy zachodzi jakis warunek (np. uplynal czas od stworzenia / user juz potwierdzil)
 
 // nie mozna potwierdzic, gdy user juz glosowal
-//  /confirm_vote?token=UUID
 
 func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 	utils.BeforeHandling(&w)
@@ -74,6 +73,7 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	email, err := UsernameToEmail(reqData.UserData.Username)
 	if err != nil || !utils.VerifyUsername(reqData.UserData.Username) {
+		log.Println("cannot convert username to an email")
 		WriteBadRequestResponse(&w)
 		return
 	}
@@ -109,7 +109,7 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 		ServiceName: "SWITCH POLLS",
 		VoteOption:  strconv.Itoa(reqData.OptionId),
 		PollTitle:   strconv.Itoa(pollId),
-		Link:        token,
+		Link:        GetConfirmationUrl(token),
 	})
 	err = utils.SendEmail(&config.Cfg.EmailConfig, config.Cfg.EmailConfig.EmailSubject, template, email)
 	if err != nil {
@@ -119,6 +119,43 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
+	utils.BeforeHandling(&w)
+
+	vars := mux.Vars(r)
+	token := vars["token"]
+	if !utils.IsAlphaWithDash(token) {
+		log.Println("invalid token format")
+		WriteBadRequestResponse(&w)
+		return
+	}
+
+	if err := VerifyToken(token); err != nil {
+		log.Println("invalid token: ", err)
+		WriteBadRequestResponse(&w)
+		return
+	}
+
+	cnf, err := db.GetConfirmationByToken(token)
+	if err != nil {
+		log.Println("cannot get confirmation by token", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	err = db.ChangeConfirmationStatus(cnf.VoteId, true)
+	if err != nil {
+		log.Println("cannot change confirmation status", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	res, _ := utils.PrepareResponse("Zarejestrowano glos!")
+	w.WriteHeader(http.StatusSeeOther)
+	w.Header().Set("Location", config.Cfg.WebConfig.TokenVerificationRedirectLocation)
+	w.Write(res)
 }
 
 //func PollVotesHandler(w http.ResponseWriter, r *http.Request) {

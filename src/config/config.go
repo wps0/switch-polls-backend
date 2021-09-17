@@ -23,12 +23,13 @@ type EmailConfiguration struct {
 }
 
 type WebConfiguration struct {
-	Domain                  string
-	Port                    uint
-	Protocol                string
-	ApiPrefix               string
-	RecaptchaVerifyEndpoint string
-	RecaptchaSecret         string
+	Domain                            string
+	Port                              uint
+	Protocol                          string
+	ApiPrefix                         string
+	RecaptchaVerifyEndpoint           string
+	RecaptchaSecret                   string
+	TokenVerificationRedirectLocation string
 }
 
 type Configuration struct {

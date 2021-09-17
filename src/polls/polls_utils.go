@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"switch-polls-backend/config"
 	"switch-polls-backend/db"
@@ -83,4 +84,39 @@ func VerifyRecaptcha(rq *http.Request) bool {
 func CreateVoteToken(voteId int) (string, error) {
 	token := utils.GetNewToken()
 	return token, db.InsertToken(token, voteId)
+}
+
+func VerifyToken(token string) error {
+	if !utils.IsAlphaWithDash(token) {
+		return errors.New("invalid character in token")
+	}
+
+	cnf, err := db.GetConfirmationByToken(token)
+	if err != nil {
+		return err
+	}
+	vote, err := db.GetVoteById(cnf.VoteId)
+	if err != nil {
+		return err
+	}
+	pollId, err := db.GetPollIdByOptionId(vote.OptionId)
+	if err != nil {
+		return err
+	}
+	res, err := db.CheckIfUserHasAlreadyVotedById(vote.UserId, pollId)
+	if err != nil {
+		return err
+	}
+	if res {
+		return errors.New("user has already voted")
+	}
+	return nil
+}
+
+func GetConfirmationUrl(token string) string {
+	port := ""
+	if config.Cfg.WebConfig.Port != 80 && config.Cfg.WebConfig.Port != 443 {
+		port = ":" + strconv.Itoa(int(config.Cfg.WebConfig.Port))
+	}
+	return config.Cfg.WebConfig.Protocol + "://" + config.Cfg.WebConfig.Domain + port + config.Cfg.WebConfig.ApiPrefix + "/polls/confirm_vote/" + token
 }
