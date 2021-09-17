@@ -115,6 +115,7 @@ $RECYCLE.BIN/
 # vendor/
 
 pkg/
-.idea/
 
+.idea/
 config.json
+build/

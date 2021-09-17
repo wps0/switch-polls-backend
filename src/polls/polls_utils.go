@@ -2,6 +2,7 @@ package polls
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -32,6 +33,13 @@ func WriteBadRequestResponse(w *http.ResponseWriter) {
 		return
 	}
 	(*w).Write(msg)
+}
+
+func UsernameToEmail(username string) (string, error) {
+	if !utils.IsAlpha(username) {
+		return "", errors.New("username can only contain alphanumeric characters")
+	}
+	return username + config.Cfg.EmailConfig.OrganizationDomain, nil
 }
 
 func VerifyRecaptcha(rq *http.Request) bool {

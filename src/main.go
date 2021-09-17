@@ -44,7 +44,8 @@ func main() {
 	// polls
 	rPolls.HandleFunc("/{id:[0-9]+}", polls.PollHandler).Methods("GET")
 	rPolls.HandleFunc("/{id:[0-9]+}", HandleCORSOptionsRequest).Methods("OPTIONS")
-	//rPolls.HandleFunc("/vote", polls.PollVoteHandler).Methods("POST")
+	rPolls.HandleFunc("/vote", polls.PollVoteHandler).Methods("POST")
+	rPolls.HandleFunc("/vote", HandleCORSOptionsRequest).Methods("OPTIONS")
 
 	// start http
 	http.Handle("/", r)

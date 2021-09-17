@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"flag"
+	"io/ioutil"
 	"log"
 	"os"
 )
@@ -10,9 +11,13 @@ import (
 var Cfg *Configuration
 
 type EmailConfiguration struct {
-	SenderEmail       string
-	SenderEmailPasswd string
-	EmailTemplatePath string
+	OrganizationDomain string
+	SenderEmail        string
+	SmtpHost           string
+	SmtpPort           int
+	SenderEmailPasswd  string
+	EmailTemplatePath  string
+	EmailTemplate      string `json:"-"`
 }
 
 type WebConfiguration struct {
@@ -93,5 +98,15 @@ func loadConfiguration(conf_path string) (*Configuration, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	loadEmailTemplate(conf, conf.EmailConfig.EmailTemplatePath)
 	return conf, nil
+}
+
+func loadEmailTemplate(cfg *Configuration, path string) {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		log.Panicf("template file load error: %v\n", err)
+	}
+	cfg.EmailConfig.EmailTemplate = string(data)
 }

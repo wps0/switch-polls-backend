@@ -1,7 +1,9 @@
 package polls
 
 import (
+	"encoding/json"
 	"github.com/gorilla/mux"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -36,44 +38,67 @@ func PollHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(resp)
 }
 
-//func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
-//	utils.BeforeHandling(&w)
-//	user := auth.AuthMgr.GetLoggedInUser(&w, r)
-//	if user == nil {
-//		return
-//	}
-//	args := mux.Vars(r)
-//	id, _ := strconv.Atoi(args["id"])
-//	poll := PollsMgr.GetPollById(uint(id))
-//	if poll == nil {
-//		w.WriteHeader(http.StatusNotFound)
-//		w.Write(utils.PrepareResponseIgnoreErrors("poll not found"))
-//		return
-//	}
-//	body, err := ioutil.ReadAll(r.Body)
-//	if err != nil {
-//		w.WriteHeader(http.StatusBadRequest)
-//		w.Write(utils.PrepareResponseIgnoreErrors("bad request"))
-//		return
-//	}
-//	var vote JsonPollVote
-//	err = json.Unmarshal(body, &vote)
-//	if err != nil {
-//		w.WriteHeader(http.StatusBadRequest)
-//		w.Write(utils.PrepareResponseIgnoreErrors("bad request"))
-//		return
-//	}
-//
-//	err = PollsMgr.AddVoteUsingSortID(user, poll, vote.SortId)
-//	if err != nil {
-//		log.Printf("Failed to add the vote of user with id %d on %d in poll %d. Error: %s", user.ID, vote.SortId, poll.ID, err)
-//		w.WriteHeader(http.StatusBadRequest)
-//		w.Write(utils.PrepareResponseIgnoreErrors(err.Error()))
-//		return
-//	}
-//	w.WriteHeader(204)
-//}
-//
+// weryfikacja przez maila (6h):
+//  - wysyłanie powiadomień
+//  - weryfikacja legitności gdy user kliknie
+//  - redirect do strony wyjściowej
+// votes endpoint zwracający w json ilość głosów per opcja (2h)
+// wyświetlanie tych głosów na frontendzie (6h)
+
+// db cleanup raz na x h - usuwa, gdy zachodzi jakis warunek
+
+// nie mozna potwierdzic, gdy user juz glosowal
+//  /confirm_vote?id=UUID&token=XD
+
+func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
+	utils.BeforeHandling(&w)
+	if !VerifyRecaptcha(r) {
+		WriteBadRequestResponse(&w)
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Println("Failed to read request body: ", err)
+		WriteBadRequestResponse(&w)
+		return
+	}
+
+	var reqData VoteRequest
+	err = json.Unmarshal(body, &reqData)
+	if err != nil {
+		log.Println("failed to unmarshal body request data", err)
+		WriteBadRequestResponse(&w)
+		return
+	}
+	email, err := UsernameToEmail(reqData.UserData.Username)
+	if err != nil || !utils.VerifyUsername(reqData.UserData.Username) {
+		WriteBadRequestResponse(&w)
+		return
+	}
+
+	pollId, err := db.GetPollIdByOptionId(reqData.OptionId)
+	if pollId <= 0 || err != nil {
+		log.Println("option id was not found or other error has occurred. error: ", err)
+		WriteBadRequestResponse(&w)
+		return
+	}
+
+	if voted, err := db.CheckIfUserHasAlreadyVoted(email, pollId); voted {
+		w.Write([]byte("user has already voted"))
+		w.WriteHeader(http.StatusForbidden)
+		return
+	} else if err != nil {
+		log.Println("check if user has voted error", err)
+		WriteBadRequestResponse(&w)
+		return
+	}
+
+	// OK
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 //func PollVotesHandler(w http.ResponseWriter, r *http.Request) {
 //	utils.BeforeHandling(&w)
 //	user := auth.AuthMgr.GetLoggedInUser(&w, r)

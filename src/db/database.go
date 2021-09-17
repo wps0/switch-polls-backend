@@ -2,10 +2,13 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"log"
+	"strconv"
 	"switch-polls-backend/config"
+	"switch-polls-backend/utils"
 )
 
 var Db *sql.DB
@@ -172,4 +175,39 @@ func GetPollById(id int) (*Poll, error) {
 	}
 
 	return &poll, nil
+}
+
+func GetPollIdByOptionId(id int) (int, error) {
+	res, err := Db.Query("SELECT poll_id FROM "+TABLE_OPTIONS+" WHERE id = ?;", id)
+	if err != nil {
+		return 0, err
+	}
+	if !res.Next() {
+		return 0, errors.New("option id " + strconv.Itoa(id) + " not found")
+	}
+	var pollId int
+	err = res.Scan(&pollId)
+	if err != nil {
+		return 0, err
+	}
+	return pollId, nil
+}
+
+func CheckIfUserHasAlreadyVoted(userEmail string, pollId int) (bool, error) {
+	if !utils.IsAlphaWithAtAndDot(userEmail) {
+		return false, errors.New("invalid email format")
+	}
+	res, err := Db.Query(`
+SELECT
+	V.confirmed
+FROM `+TABLE_VOTES+` V INNER JOIN `+TABLE_USERS+`
+		U ON V.user_id = U.id
+	INNER JOIN `+TABLE_OPTIONS+`O ON
+		V.option_id = O.id
+WHERE O.poll_id = ? AND V.confirmed = 1 AND U.email = '`+userEmail+`';`, pollId)
+	if err != nil {
+		log.Printf("error when checking if user `%s` has already voted on poll `%d`: %v", userEmail, pollId, err)
+		return false, err
+	}
+	return res.Next(), nil
 }
