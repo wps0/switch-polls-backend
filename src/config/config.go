@@ -10,8 +10,14 @@ import (
 
 var Cfg *Configuration
 
+type CORSConfiguration struct {
+	AccessControlAllowOrigin  string
+	AccessControlAllowHeaders string
+}
+
 type EmailConfiguration struct {
-	OrganizationDomain    string
+	OrganizationDomain string
+	// The contents of 'FROM' email header
 	SenderEmail           string
 	SenderMailboxUsername string
 	SmtpHost              string
@@ -19,10 +25,13 @@ type EmailConfiguration struct {
 	SenderEmailPasswd     string
 	EmailSubject          string
 	EmailTemplatePath     string
-	EmailTemplate         string `json:"-"`
+	// Internal-use only - contents of the file specified in EmailTemplatePath is loaded there upon startup
+	EmailTemplate string `json:"-"`
 }
 
 type WebConfiguration struct {
+	CORS                              CORSConfiguration
+	ListeningAddress                  string
 	Domain                            string
 	Port                              uint
 	Protocol                          string
@@ -39,12 +48,25 @@ type Configuration struct {
 }
 
 var defaultConfig = Configuration{
-	EmailConfig: EmailConfiguration{},
+	EmailConfig: EmailConfiguration{
+		OrganizationDomain:    "zsi.kielce.pl",
+		SenderEmail:           "switch@zsi.kielce.pl",
+		SenderMailboxUsername: "switch",
+		SmtpHost:              "smtp.zsi.kielce.pl",
+		SmtpPort:              587,
+		SenderEmailPasswd:     "",
+		EmailSubject:          "[SWITCH POLLS] Potwierdź swój głos",
+		EmailTemplatePath:     "./EmailTemplate.html",
+	},
 	WebConfig: WebConfiguration{
+		CORS: CORSConfiguration{
+			AccessControlAllowOrigin:  "*",
+			AccessControlAllowHeaders: "g-recaptcha-response",
+		},
 		ApiPrefix:               "/api",
 		RecaptchaVerifyEndpoint: "https://www.google.com/recaptcha/api/siteverify",
 	},
-	DbString: "root:passwd@tcp(localhost:3306)/mydatabase",
+	DbString: "username:passwd@tcp(localhost:3306)/mydatabase",
 }
 
 // flags

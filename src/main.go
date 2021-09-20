@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
@@ -10,8 +9,6 @@ import (
 	"switch-polls-backend/polls"
 	"switch-polls-backend/utils"
 )
-
-var Db *sql.DB
 
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -53,6 +50,6 @@ func main() {
 
 	// start http
 	http.Handle("/", r)
-	log.Printf("Listening at %s://%s%s\n", config.Cfg.WebConfig.Protocol, utils.GetHostname(), config.Cfg.WebConfig.ApiPrefix)
-	log.Fatal(http.ListenAndServe(utils.GetHostname(), nil))
+	log.Printf("Listening on %s://%s%s\n", config.Cfg.WebConfig.Protocol, utils.GetListeningAddress(), config.Cfg.WebConfig.ApiPrefix)
+	log.Fatal(http.ListenAndServe(utils.GetListeningAddress(), nil))
 }

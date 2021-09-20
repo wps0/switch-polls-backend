@@ -50,10 +50,8 @@ func PrepareResponse(data interface{}) ([]byte, error) {
 
 func BeforeHandling(w *http.ResponseWriter) {
 	(*w).Header().Set("Content-Type", "application/json")
-	if config.DevMode {
-		(*w).Header().Set("Access-Control-Allow-Origin", "*")
-	}
-	(*w).Header().Set("Access-Control-Allow-Headers", "g-recaptcha-response")
+	(*w).Header().Set("Access-Control-Allow-Origin", config.Cfg.WebConfig.CORS.AccessControlAllowOrigin)
+	(*w).Header().Set("Access-Control-Allow-Headers", config.Cfg.WebConfig.CORS.AccessControlAllowHeaders)
 }
 
 func ToLowerCase(ch uint8) uint8 {
@@ -85,8 +83,8 @@ func IsAlphaWithDashAndUnderscore(s string) bool {
 	return isAlphaDashUnderscoreRegex.MatchString(s)
 }
 
-func GetHostname() string {
-	return config.Cfg.WebConfig.Domain + ":" + strconv.Itoa(int(config.Cfg.WebConfig.Port))
+func GetListeningAddress() string {
+	return config.Cfg.WebConfig.ListeningAddress + ":" + strconv.Itoa(int(config.Cfg.WebConfig.Port))
 }
 
 func VerifyUsername(s string) bool {

@@ -118,4 +118,5 @@ pkg/
 
 .idea/
 config.json
+config.remote.json
 build/

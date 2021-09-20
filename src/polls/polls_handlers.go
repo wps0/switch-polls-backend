@@ -39,12 +39,7 @@ func PollHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(resp)
 }
 
-// votes endpoint zwracający w json ilość głosów per opcja (2h)
-// wyświetlanie tych głosów na frontendzie (6h)
-
-// db cleanup raz na x h - usuwa, gdy zachodzi jakis warunek (np. uplynal czas od stworzenia / user juz potwierdzil)
-
-// nie mozna potwierdzic, gdy user juz glosowal
+// TODO: db cleanup raz na x h - usuwa, gdy zachodzi jakis warunek (np. uplynal czas od stworzenia / user juz potwierdzil)
 
 func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 	utils.BeforeHandling(&w)
@@ -151,14 +146,18 @@ func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	vote, err := db.GetVoteById(cnf.VoteId)
-	voteId := 0
+	pollId := 0
 	if err != nil {
 		log.Println("vote by id error", err)
-		voteId = vote.Id
+	} else {
+		pollId, err = db.GetPollIdByOptionId(vote.OptionId)
+		if err != nil {
+			log.Println("cannot get pollId by option id when confirming user's vote", err)
+		}
 	}
 
 	res, _ := utils.PrepareResponse("Zarejestrowano glos!")
-	w.Header().Set("Location", config.Cfg.WebConfig.TokenVerificationRedirectLocation+strconv.Itoa(voteId))
+	w.Header().Set("Location", config.Cfg.WebConfig.TokenVerificationRedirectLocation+strconv.Itoa(pollId))
 	w.WriteHeader(http.StatusSeeOther)
 	w.Write(res)
 }
