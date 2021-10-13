@@ -135,10 +135,14 @@ func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
 	pollId := 0
 	if err != nil {
 		log.Println("vote by id error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	} else {
 		pollId, err = db.GetPollIdByOptionId(vote.OptionId)
 		if err != nil {
 			log.Println("cannot get pollId by option id when confirming user's vote", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 	}
 
