@@ -13,12 +13,6 @@ import (
 )
 
 func PollHandler(w http.ResponseWriter, r *http.Request) {
-	utils.BeforeHandling(&w)
-	if !VerifyRecaptcha(r) {
-		WriteBadRequestResponse(&w)
-		return
-	}
-
 	args := mux.Vars(r)
 	_id, err := strconv.Atoi(args["id"])
 	if err != nil {
@@ -42,12 +36,6 @@ func PollHandler(w http.ResponseWriter, r *http.Request) {
 // TODO: db cleanup raz na x h - usuwa, gdy zachodzi jakis warunek (np. uplynal czas od stworzenia / user juz potwierdzil)
 
 func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
-	utils.BeforeHandling(&w)
-	if !VerifyRecaptcha(r) {
-		WriteBadRequestResponse(&w)
-		return
-	}
-
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Println("Failed to read request body: ", err)
@@ -114,8 +102,6 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
-	utils.BeforeHandling(&w)
-
 	vars := mux.Vars(r)
 	token := vars["token"]
 	if !utils.IsAlphaWithDash(token) {
@@ -163,12 +149,6 @@ func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func PollResultsHandler(w http.ResponseWriter, r *http.Request) {
-	utils.BeforeHandling(&w)
-	if !VerifyRecaptcha(r) {
-		WriteBadRequestResponse(&w)
-		return
-	}
-
 	args := mux.Vars(r)
 	id, _ := strconv.Atoi(args["id"])
 	poll, err := db.GetPollById(id)
