@@ -60,13 +60,16 @@ func (m *MySQLUserRepository) InitDb(dbString string) *sql.DB {
 }
 
 // GetUser Does not support empty values!
-func (m *MySQLUserRepository) GetUser(conditions User) (*User, error) {
+func (m *MySQLUserRepository) GetUser(conditions User, createIfDoesNotExist bool) (*User, error) {
 	condition, values := ObjectToSQLCondition(AND, conditions, false)
 	row := m.Db.QueryRow("SELECT * FROM "+TABLE_USERS+" WHERE "+condition+";", values...)
 
 	var user User
 	if err := row.Scan(&user.Id, &user.Email, &user.CreateDate); err != nil {
 		if err == sql.ErrNoRows {
+			if createIfDoesNotExist {
+				return m.CreateUser(conditions)
+			}
 			return &user, fmt.Errorf("GetUser: user %v not found", conditions)
 		}
 		return nil, fmt.Errorf("GetUser %v: %v", conditions, err)
@@ -87,7 +90,7 @@ func (m *MySQLUserRepository) CreateUser(user User) (*User, error) {
 	if id == 0 || err != nil {
 		return nil, fmt.Errorf("CreateUser %v: cannot get last inserted user's id (err: %v) though the query was successful", user, err)
 	}
-	return m.GetUser(User{Id: int(id)})
+	return m.GetUser(User{Id: int(id)}, false)
 }
 
 func (m *MySQLUserRepository) UpdateUser(user User) (*User, error) {

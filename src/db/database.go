@@ -248,7 +248,7 @@ func CheckIfUserHasAlreadyVoted(userEmail string, pollId int) (bool, error) {
 	}
 	user, err := usersRepo.GetUser(User{
 		Email: userEmail,
-	})
+	}, false)
 	if err != nil {
 		return false, err
 	}
@@ -272,29 +272,10 @@ WHERE O.poll_id = ? AND V.confirmed = 1 AND U.id = ?;`, pollId, userId)
 	return res.Next(), res.Err()
 }
 
-func CheckIfUserExists(email string) bool {
-	res, err := Db.Query("SELECT id FROM " + TABLE_USERS + " WHERE email = '" + email + "';")
-	if err != nil {
-		log.Println("check if user exists error", err)
-		return false
-	}
-	defer res.Close()
-	return res.Next()
-}
-
 func InsertVote(userEmail string, optId int) (int, error) {
-	var user *User
-	var err error
-	if !CheckIfUserExists(userEmail) {
-		user, err = usersRepo.CreateUser(User{Email: userEmail})
-		if err != nil {
-			return 0, err
-		}
-	} else {
-		user, err = usersRepo.GetUser(User{Email: userEmail})
-		if err != nil {
-			return 0, err
-		}
+	user, err := usersRepo.GetUser(User{Email: userEmail}, true)
+	if err != nil {
+		return 0, err
 	}
 	res, err := Db.Exec("INSERT INTO "+TABLE_VOTES+"(user_id, option_id) VALUES (?, ?);", user.Id, optId)
 	if err != nil {
