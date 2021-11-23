@@ -7,19 +7,19 @@ import (
 	"switch-polls-backend/config"
 )
 
-type MySQLUserRepository struct {
+type MySQLUsersRepository struct {
 	Db *sql.DB
 }
 
-func NewMySQLUserRepository() MySQLUserRepository {
-	return MySQLUserRepository{}
+func NewMySQLUsersRepository() MySQLUsersRepository {
+	return MySQLUsersRepository{}
 }
 
-func (m *MySQLUserRepository) Init(cfg *config.Configuration) {
+func (m *MySQLUsersRepository) Init(cfg *config.Configuration) {
 	m.Db = m.InitDb(cfg.DbString)
 }
 
-func (m *MySQLUserRepository) InitDb(dbString string) *sql.DB {
+func (m *MySQLUsersRepository) InitDb(dbString string) *sql.DB {
 	log.Println("Initialising database")
 	db, err := sql.Open("mysql", dbString)
 	if err != nil {
@@ -60,7 +60,7 @@ func (m *MySQLUserRepository) InitDb(dbString string) *sql.DB {
 }
 
 // GetUser Does not support empty values!
-func (m *MySQLUserRepository) GetUser(conditions User, createIfDoesNotExist bool) (*User, error) {
+func (m *MySQLUsersRepository) GetUser(conditions User, createIfDoesNotExist bool) (*User, error) {
 	condition, values := ObjectToSQLCondition(AND, conditions, false)
 	row := m.Db.QueryRow("SELECT * FROM "+TABLE_USERS+" WHERE "+condition+";", values...)
 
@@ -77,7 +77,7 @@ func (m *MySQLUserRepository) GetUser(conditions User, createIfDoesNotExist bool
 	return &user, nil
 }
 
-func (m *MySQLUserRepository) CreateUser(user User) (*User, error) {
+func (m *MySQLUsersRepository) CreateUser(user User) (*User, error) {
 	res, err := m.Db.Exec("INSERT INTO "+TABLE_USERS+" (`email`) VALUES (?);", user.Email)
 	if err != nil {
 		return nil, fmt.Errorf("CreateUser %v: %v", user, err)
@@ -93,6 +93,6 @@ func (m *MySQLUserRepository) CreateUser(user User) (*User, error) {
 	return m.GetUser(User{Id: int(id)}, false)
 }
 
-func (m *MySQLUserRepository) UpdateUser(user User) (*User, error) {
+func (m *MySQLUsersRepository) UpdateUser(user User) (*User, error) {
 	panic("implement me")
 }

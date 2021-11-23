@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS ` + "`" + TABLE_CONFIRMATIONS + "`" + ` (
 func InitDb() {
 	log.Println("Initialising database")
 	db, err := sql.Open("mysql", config.Cfg.DbString)
-	usersRepo = NewMySQLUserRepository()
+	usersRepo = NewMySQLUsersRepository()
 	usersRepo.Init(config.Cfg)
 	if err != nil {
 		panic(err.Error())
