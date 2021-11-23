@@ -45,3 +45,9 @@ type VoteResult struct {
 	Content string `json:"content"`
 	Count   int    `json:"count"`
 }
+
+type User struct {
+	Id         int    `json:"id"`
+	Email      string `json:"email"`
+	CreateDate int64  `json:"-"`
+}

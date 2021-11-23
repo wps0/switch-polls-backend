@@ -96,6 +96,8 @@ CREATE TABLE IF NOT EXISTS ` + "`" + TABLE_CONFIRMATIONS + "`" + ` (
 func InitDb() {
 	log.Println("Initialising database")
 	db, err := sql.Open("mysql", config.Cfg.DbString)
+	usersRepo = NewMySQLUserRepository()
+	usersRepo.Init(config.Cfg)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -198,32 +200,6 @@ func GetPollIdByOptionId(id int) (int, error) {
 	return pollId, nil
 }
 
-func GetUserIdByEmail(email string) (int, error) {
-	res, err := Db.Query("SELECT id FROM " + TABLE_USERS + " WHERE email = '" + email + "';")
-	defer res.Close()
-	if err != nil {
-		log.Println("get user by id error", err)
-		return 0, err
-	}
-	if !res.Next() {
-		log.Println("get user by id user does not exist")
-		userId, err := InsertUser(email)
-		if err != nil {
-			log.Println("cannot create user", err)
-			return 0, err
-		}
-		log.Printf("created new user (id: %d, email: %s)", userId, email)
-		return userId, nil
-	}
-	var id int
-	err = res.Scan(&id)
-	if err != nil {
-		log.Println("get user id scan error", err)
-		return 0, err
-	}
-	return id, nil
-}
-
 func GetVoteById(id int) (*PollVote, error) {
 	var vote PollVote
 	err := Db.QueryRow("SELECT * FROM "+TABLE_VOTES+" WHERE id = ?;", id).Scan(&vote.Id, &vote.UserId, &vote.OptionId, &vote.Confirmed, &vote.ConfirmedAt, &vote.CreateDate)
@@ -270,11 +246,13 @@ func CheckIfUserHasAlreadyVoted(userEmail string, pollId int) (bool, error) {
 	if !utils.IsAlphaWithAtAndDot(userEmail) {
 		return false, errors.New("invalid email format")
 	}
-	userId, err := GetUserIdByEmail(userEmail)
+	user, err := usersRepo.GetUser(User{
+		Email: userEmail,
+	})
 	if err != nil {
 		return false, err
 	}
-	return CheckIfUserHasAlreadyVotedById(userId, pollId)
+	return CheckIfUserHasAlreadyVotedById(user.Id, pollId)
 }
 
 func CheckIfUserHasAlreadyVotedById(userId int, pollId int) (bool, error) {
@@ -304,32 +282,21 @@ func CheckIfUserExists(email string) bool {
 	return res.Next()
 }
 
-func InsertUser(email string) (int, error) {
-	res, err := Db.Exec("INSERT INTO " + TABLE_USERS + "(email) VALUES ('" + email + "');")
-	if err != nil {
-		return 0, err
-	}
-	if rows, err := res.RowsAffected(); err != nil || rows != 1 {
-		return 0, err
-	}
-	return GetUserIdByEmail(email)
-}
-
 func InsertVote(userEmail string, optId int) (int, error) {
-	var userId int
+	var user *User
 	var err error
 	if !CheckIfUserExists(userEmail) {
-		userId, err = InsertUser(userEmail)
+		user, err = usersRepo.CreateUser(User{Email: userEmail})
 		if err != nil {
 			return 0, err
 		}
 	} else {
-		userId, err = GetUserIdByEmail(userEmail)
+		user, err = usersRepo.GetUser(User{Email: userEmail})
 		if err != nil {
 			return 0, err
 		}
 	}
-	res, err := Db.Exec("INSERT INTO "+TABLE_VOTES+"(user_id, option_id) VALUES (?, ?);", userId, optId)
+	res, err := Db.Exec("INSERT INTO "+TABLE_VOTES+"(user_id, option_id) VALUES (?, ?);", user.Id, optId)
 	if err != nil {
 		return 0, err
 	}
