@@ -45,11 +45,11 @@ func VerifyToken(token string) error {
 	if err != nil {
 		return err
 	}
-	pollId, err := db.GetPollIdByOptionId(vote.OptionId)
+	option, err := db.PollsRepo.GetPollOption(db.PollOption{Id: vote.OptionId}, false)
 	if err != nil {
 		return err
 	}
-	res, err := db.CheckIfUserHasAlreadyVotedById(vote.UserId, pollId)
+	res, err := db.CheckIfUserHasAlreadyVotedById(vote.UserId, option.PollId)
 	if err != nil {
 		return err
 	}

@@ -2,13 +2,17 @@ package db
 
 import "database/sql"
 
+// TODO: change the naming to correspond to the one in db
 type OptionExtras struct {
-	Type  string `json:"type"`
-	Value string `json:"value"`
+	Id       int    `json:"-"`
+	OptionId int    `json:"-"`
+	Type     string `json:"type"`
+	Value    string `json:"value"`
 }
 
 type PollOption struct {
 	Id      int            `json:"id"`
+	PollId  int            `json:"-"`
 	Content string         `json:"content"`
 	Extras  []OptionExtras `json:"extras"`
 }

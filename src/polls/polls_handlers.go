@@ -21,7 +21,7 @@ func PollHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := db.GetPollById(_id)
+	res, err := db.PollsRepo.GetPoll(db.Poll{Id: _id}, true)
 	if err != nil || res == nil || res.Id != _id {
 		w.WriteHeader(http.StatusNotFound)
 		resp, _ := utils.PrepareResponse("the poll with the given id was not found")
@@ -57,14 +57,14 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pollId, err := db.GetPollIdByOptionId(reqData.OptionId)
-	if pollId <= 0 || err != nil {
+	option, err := db.PollsRepo.GetPollOption(db.PollOption{Id: reqData.OptionId}, false) //db.GetPollIdByOptionId(reqData.OptionId)
+	if err != nil || option.PollId <= 0 {
 		log.Println("option id was not found or other error has occurred. error: ", err)
 		WriteBadRequestResponse(&w)
 		return
 	}
 
-	voted, err := db.CheckIfUserHasAlreadyVoted(email, pollId)
+	voted, err := db.CheckIfUserHasAlreadyVoted(email, option.PollId)
 	if voted {
 		w.WriteHeader(http.StatusForbidden)
 		w.Write([]byte("user has already voted"))
@@ -84,11 +84,18 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	token, err := CreateVoteToken(voteId)
 
+	poll, err := db.PollsRepo.GetPoll(db.Poll{Id: option.PollId}, false)
+	if err != nil {
+		log.Printf("PollVoteHandler cannog get the poll with id %v - vote request by user %s on option option %d. error: %v", option.PollId, email, reqData.OptionId, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	template := utils.FillEmailTemplate(utils.EmailTemplateValues{
 		Receiver:    email,
 		ServiceName: "SWITCH POLLS",
-		VoteOption:  strconv.Itoa(reqData.OptionId),
-		PollTitle:   strconv.Itoa(pollId),
+		VoteOption:  option.Content, // TODO: limit the length to n chars and append '...' to the end if the threshold is reached
+		PollTitle:   poll.Title + "(id: " + strconv.Itoa(poll.Id) + ")",
 		Link:        GetConfirmationUrl(token),
 	})
 	err = utils.SendEmail(&config.Cfg.EmailConfig, config.Cfg.EmailConfig.EmailSubject, template, email)
@@ -132,13 +139,13 @@ func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	vote, err := db.GetVoteById(cnf.VoteId)
-	pollId := 0
+	var option db.PollOption
 	if err != nil {
 		log.Println("vote by id error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	} else {
-		pollId, err = db.GetPollIdByOptionId(vote.OptionId)
+		option, err = db.PollsRepo.GetPollOption(db.PollOption{Id: vote.OptionId}, false) //db.GetPollIdByOptionId(vote.OptionId)
 		if err != nil {
 			log.Println("cannot get pollId by option id when confirming user's vote", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -147,7 +154,8 @@ func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res, _ := utils.PrepareResponse("Zarejestrowano glos!")
-	w.Header().Set("Location", config.Cfg.WebConfig.TokenVerificationRedirectLocation+strconv.Itoa(pollId))
+	// TODO: use templates instead of gluing the id to the end
+	w.Header().Set("Location", config.Cfg.WebConfig.TokenVerificationRedirectLocation+strconv.Itoa(option.PollId))
 	w.WriteHeader(http.StatusSeeOther)
 	w.Write(res)
 }
@@ -155,7 +163,7 @@ func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
 func PollResultsHandler(w http.ResponseWriter, r *http.Request) {
 	args := mux.Vars(r)
 	id, _ := strconv.Atoi(args["id"])
-	poll, err := db.GetPollById(id)
+	poll, err := db.PollsRepo.GetPoll(db.Poll{Id: id}, false)
 	if err != nil {
 		WriteBadRequestResponse(&w)
 		return
