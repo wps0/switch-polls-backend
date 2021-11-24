@@ -17,7 +17,7 @@ type PollsRepository interface {
 }
 
 type VotesRepository interface {
-	GetVote(poll PollVote) (*PollVote, error)
-	CreateVote(poll Poll) (*Poll, error)
-	UpdateVote(poll Poll) (*Poll, error)
+	GetVote(vote PollVote) (*PollVote, error)
+	CreateVote(vote PollVote) (*PollVote, error)
+	UpdateVote(vote PollVote) (*PollVote, error)
 }
