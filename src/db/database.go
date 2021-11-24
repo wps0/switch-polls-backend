@@ -13,57 +13,56 @@ import (
 var Db *sql.DB
 
 const (
-	TABLE_PREFIX        = "spolls_"
-	TABLE_POLLS         = TABLE_PREFIX + "polls"
-	TABLE_VOTES         = TABLE_PREFIX + "votes"
-	TABLE_USERS         = TABLE_PREFIX + "users"
-	TABLE_OPTIONS       = TABLE_PREFIX + "options"
-	TABLE_EXTRAS        = TABLE_PREFIX + "extras"
-	TABLE_CONFIRMATIONS = TABLE_PREFIX + "confirmations"
+	TablePrefix        = "spolls_"
+	TablePolls         = TablePrefix + "polls"
+	TableVotes         = TablePrefix + "votes"
+	TableUsers         = TablePrefix + "users"
+	TableOptions       = TablePrefix + "options"
+	TableExtras        = TablePrefix + "extras"
+	TableConfirmations = TablePrefix + "confirmations"
 )
 
 const (
-	CREATE_TABLE_USERS_QUERY = `
-CREATE TABLE IF NOT EXISTS ` + "`" + TABLE_USERS + "`" + ` (
+	CreateTableUsersQuery = `
+CREATE TABLE IF NOT EXISTS ` + "`" + TableUsers + "`" + ` (
 	id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
 	email VARCHAR(128) NOT NULL,
 	create_date BIGINT NOT NULL DEFAULT UNIX_TIMESTAMP(),
 	INDEX ix_users_email(email)
 );`
-	CREATE_TABLE_POLLS_QUERY = `
-CREATE TABLE IF NOT EXISTS ` + "`" + TABLE_POLLS + "`" + ` (
+	CreateTablePollsQuery = `
+CREATE TABLE IF NOT EXISTS ` + "`" + TablePolls + "`" + ` (
 	id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
 	title VARCHAR(256) NOT NULL,
 	description VARCHAR(2048) NULL,
 	create_date BIGINT NOT NULL DEFAULT UNIX_TIMESTAMP()
 );`
-	CREATE_TABLE_OPTIONS_QUERY = `
-CREATE TABLE IF NOT EXISTS ` + "`" + TABLE_OPTIONS + "`" + ` (
+	CreateTableOptionsQuery = `
+CREATE TABLE IF NOT EXISTS ` + "`" + TableOptions + "`" + ` (
 	id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
 	poll_id INT,
 	content VARCHAR(1024) NOT NULL,
 	INDEX fk_options_poll_ix(poll_id),
 	FOREIGN KEY fk_options_poll_ix(poll_id)
-        REFERENCES ` + TABLE_POLLS + `(id)
+        REFERENCES ` + TablePolls + `(id)
         ON DELETE CASCADE
 		ON UPDATE CASCADE
-
 );`
-	CREATE_TABLE_EXTRAS_QUERY = `
-CREATE TABLE IF NOT EXISTS ` + "`" + TABLE_EXTRAS + "`" + ` (
+	CreateTableExtrasQuery = `
+CREATE TABLE IF NOT EXISTS ` + "`" + TableExtras + "`" + ` (
 	id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
 	option_id INT NULL,
 	type VARCHAR(64) NOT NULL,
 	content VARCHAR(2048) NULL,
 	INDEX fk_extras_opt_ix (option_id),
 	FOREIGN KEY fk_extras_opt_ix(option_id)
-        REFERENCES ` + TABLE_OPTIONS + `(id)
+        REFERENCES ` + TableOptions + `(id)
         ON DELETE CASCADE
 		ON UPDATE CASCADE
 );`
 	//TODO: usunac confirmed
-	CREATE_TABLE_VOTES_QUERY = `
-CREATE TABLE IF NOT EXISTS ` + "`" + TABLE_VOTES + "`" + ` (
+	CreateTableVotesQuery = `
+CREATE TABLE IF NOT EXISTS ` + "`" + TableVotes + "`" + ` (
 	id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
 	user_id INT NULL,
 	option_id INT NULL,
@@ -73,22 +72,22 @@ CREATE TABLE IF NOT EXISTS ` + "`" + TABLE_VOTES + "`" + ` (
 	INDEX fk_votes_usr_ix (user_id),
 	INDEX fk_votes_opt_ix (option_id),
 	FOREIGN KEY fk_votes_usr_ix(user_id)
-        REFERENCES ` + TABLE_USERS + `(id)
+        REFERENCES ` + TableUsers + `(id)
         ON DELETE SET NULL
 		ON UPDATE CASCADE,
 	FOREIGN KEY fk_votes_opt_ix(option_id)
-        REFERENCES ` + TABLE_OPTIONS + `(id)
+        REFERENCES ` + TableOptions + `(id)
         ON DELETE SET NULL
 		ON UPDATE CASCADE
 );`
-	CREATE_TABLE_VOTE_CONFIRMATIONS_QUERY = `
-CREATE TABLE IF NOT EXISTS ` + "`" + TABLE_CONFIRMATIONS + "`" + ` (
+	CreateTableVoteConfirmationsQuery = `
+CREATE TABLE IF NOT EXISTS ` + "`" + TableConfirmations + "`" + ` (
 	token VARCHAR(192) NOT NULL PRIMARY KEY,
 	vote_id INT NOT NULL,
 	create_date BIGINT DEFAULT UNIX_TIMESTAMP(),
 	INDEX fk_confirmations_vote_id_ix (vote_id),
 	FOREIGN KEY fk_confirmations_vote_id_ix(vote_id)
-        REFERENCES ` + TABLE_VOTES + `(id)
+        REFERENCES ` + TableVotes + `(id)
         ON DELETE CASCADE
 		ON UPDATE CASCADE
 );`
@@ -102,27 +101,27 @@ func InitDb() {
 	}
 	Db = db
 
-	_, err = Db.Exec(CREATE_TABLE_USERS_QUERY)
+	_, err = Db.Exec(CreateTableUsersQuery)
 	if err != nil {
 		panic(err)
 	}
-	_, err = Db.Exec(CREATE_TABLE_POLLS_QUERY)
+	_, err = Db.Exec(CreateTablePollsQuery)
 	if err != nil {
 		panic(err)
 	}
-	_, err = Db.Exec(CREATE_TABLE_OPTIONS_QUERY)
+	_, err = Db.Exec(CreateTableOptionsQuery)
 	if err != nil {
 		panic(err)
 	}
-	_, err = Db.Exec(CREATE_TABLE_EXTRAS_QUERY)
+	_, err = Db.Exec(CreateTableExtrasQuery)
 	if err != nil {
 		panic(err)
 	}
-	_, err = Db.Exec(CREATE_TABLE_VOTES_QUERY)
+	_, err = Db.Exec(CreateTableVotesQuery)
 	if err != nil {
 		panic(err)
 	}
-	_, err = Db.Exec(CREATE_TABLE_VOTE_CONFIRMATIONS_QUERY)
+	_, err = Db.Exec(CreateTableVoteConfirmationsQuery)
 	if err != nil {
 		panic(err)
 	}
@@ -138,7 +137,7 @@ func InitDb() {
 
 func GetVoteById(id int) (*PollVote, error) {
 	var vote PollVote
-	err := Db.QueryRow("SELECT * FROM "+TABLE_VOTES+" WHERE id = ?;", id).Scan(&vote.Id, &vote.UserId, &vote.OptionId, &vote.Confirmed, &vote.ConfirmedAt, &vote.CreateDate)
+	err := Db.QueryRow("SELECT * FROM "+TableVotes+" WHERE id = ?;", id).Scan(&vote.Id, &vote.UserId, &vote.OptionId, &vote.Confirmed, &vote.ConfirmedAt, &vote.CreateDate)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +147,7 @@ func GetVoteById(id int) (*PollVote, error) {
 
 func GetConfirmationByToken(token string) (*Confirmation, error) {
 	var cnf Confirmation
-	err := Db.QueryRow("SELECT * FROM "+TABLE_CONFIRMATIONS+" WHERE token = '"+token+"';").Scan(&cnf.Token, &cnf.VoteId, &cnf.CreateDate)
+	err := Db.QueryRow("SELECT * FROM "+TableConfirmations+" WHERE token = '"+token+"';").Scan(&cnf.Token, &cnf.VoteId, &cnf.CreateDate)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +158,7 @@ func GetConfirmationByToken(token string) (*Confirmation, error) {
 func PrepareResultsSummary(pollId int) (*ResultsSummary, error) {
 	res, err := Db.Query(`
 SELECT O.id, O.content, COUNT(*) 
-FROM `+TABLE_VOTES+` V INNER JOIN `+TABLE_OPTIONS+` O ON V.option_id = O.id 
+FROM `+TableVotes+` V INNER JOIN `+TableOptions+` O ON V.option_id = O.id 
 WHERE O.poll_id = ? AND confirmed = 1 GROUP BY O.id;`, pollId)
 	if err != nil {
 		log.Println("prepare results error", err)
@@ -195,9 +194,9 @@ func CheckIfUserHasAlreadyVotedById(userId int, pollId int) (bool, error) {
 	res, err := Db.Query(`
 SELECT
 	V.confirmed
-FROM `+TABLE_VOTES+` V INNER JOIN `+TABLE_USERS+`
+FROM `+TableVotes+` V INNER JOIN `+TableUsers+`
 		U ON V.user_id = U.id
-	INNER JOIN `+TABLE_OPTIONS+` O ON
+	INNER JOIN `+TableOptions+` O ON
 		V.option_id = O.id
 WHERE O.poll_id = ? AND V.confirmed = 1 AND U.id = ?;`, pollId, userId)
 	if err != nil {
@@ -225,7 +224,7 @@ func InsertVote(userEmail string, optId int) (int, error) {
 }
 
 func InsertToken(token string, voteId int) error {
-	res, err := Db.Exec("INSERT INTO "+TABLE_CONFIRMATIONS+"(token, vote_id) VALUES ('"+token+"', ?);", voteId)
+	res, err := Db.Exec("INSERT INTO "+TableConfirmations+"(token, vote_id) VALUES ('"+token+"', ?);", voteId)
 	if err != nil {
 		return err
 	}
@@ -236,7 +235,7 @@ func InsertToken(token string, voteId int) error {
 }
 
 func ChangeConfirmationStatus(voteId int, newStatus bool) error {
-	res, err := Db.Exec("UPDATE "+TABLE_VOTES+" SET confirmed = ?, confirmed_at = ? WHERE id = ?;", newStatus, time.Now().Unix(), voteId)
+	res, err := Db.Exec("UPDATE "+TableVotes+" SET confirmed = ?, confirmed_at = ? WHERE id = ?;", newStatus, time.Now().Unix(), voteId)
 	if err != nil {
 		return err
 	}

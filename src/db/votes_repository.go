@@ -10,7 +10,7 @@ type MySQLVotesRepository struct {
 
 func (m *MySQLVotesRepository) GetVote(vote PollVote) (*PollVote, error) {
 	condition, args := ObjectToSQLCondition(AND, vote, false)
-	row := Db.QueryRow("SELECT * FROM "+TABLE_VOTES+" "+condition+";", args...)
+	row := Db.QueryRow("SELECT * FROM "+TableVotes+" "+condition+";", args...)
 	var resVote PollVote
 	if err := row.Scan(&resVote.Id, &resVote.UserId, &resVote.OptionId, &resVote.Confirmed, &resVote.ConfirmedAt, &resVote.CreateDate); err != nil {
 		if err == sql.ErrNoRows {
@@ -22,7 +22,7 @@ func (m *MySQLVotesRepository) GetVote(vote PollVote) (*PollVote, error) {
 }
 
 func (m *MySQLVotesRepository) CreateVote(vote PollVote) (*PollVote, error) {
-	res, err := Db.Exec("INSERT INTO "+TABLE_VOTES+"(user_id, option_id) VALUES (?, ?);", vote.UserId, vote.OptionId)
+	res, err := Db.Exec("INSERT INTO "+TableVotes+"(user_id, option_id) VALUES (?, ?);", vote.UserId, vote.OptionId)
 	if err != nil {
 		return nil, fmt.Errorf("CreateVote %v: %v", vote, err)
 	}

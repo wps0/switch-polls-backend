@@ -21,7 +21,7 @@ func (m *MySQLPollsRepository) Init(db *sql.DB) {
 // recursiveMode - return the whole poll structure, together with pollOptions and optionExtras
 func (m *MySQLPollsRepository) GetPoll(cond Poll, recursiveMode bool) (*Poll, error) {
 	condition, values := ObjectToSQLCondition(AND, cond, false)
-	row := m.Db.QueryRow("SELECT * FROM "+TABLE_POLLS+" WHERE "+condition+";", values...)
+	row := m.Db.QueryRow("SELECT * FROM "+TablePolls+" WHERE "+condition+";", values...)
 
 	var poll Poll
 	if err := row.Scan(&poll.Id, &poll.Title, &poll.Description, &poll.CreateTime); err != nil {
@@ -43,7 +43,7 @@ func (m *MySQLPollsRepository) GetPoll(cond Poll, recursiveMode bool) (*Poll, er
 
 func (m *MySQLPollsRepository) GetPollOption(cond PollOption, recursiveMode bool) (PollOption, error) {
 	conditionString, args := ObjectToSQLCondition(AND, cond, false)
-	row := m.Db.QueryRow("SELECT * FROM "+TABLE_OPTIONS+" WHERE "+conditionString, args...)
+	row := m.Db.QueryRow("SELECT * FROM "+TableOptions+" WHERE "+conditionString, args...)
 	var option PollOption
 	if err := row.Scan(&option.Id, &option.PollId, &option.Content); err != nil {
 		return PollOption{}, fmt.Errorf("GetPollOption %v: %v", cond, err)
@@ -63,7 +63,7 @@ func (m *MySQLPollsRepository) GetPollOption(cond PollOption, recursiveMode bool
 }
 
 func (m *MySQLPollsRepository) GetPollOptions(pollId int, recursiveMode bool) ([]PollOption, error) {
-	rows, err := m.Db.Query("SELECT * FROM "+TABLE_OPTIONS+" AS O WHERE O.poll_id = ?;", pollId)
+	rows, err := m.Db.Query("SELECT * FROM "+TableOptions+" AS O WHERE O.poll_id = ?;", pollId)
 	if err != nil {
 		return nil, fmt.Errorf("GetPollOptions %d: %v", pollId, err)
 	}
@@ -91,7 +91,7 @@ func (m *MySQLPollsRepository) GetPollOptions(pollId int, recursiveMode bool) ([
 }
 
 func (m *MySQLPollsRepository) GetOptionExtras(optionId int) ([]OptionExtras, error) {
-	res, err := Db.Query("SELECT * FROM "+TABLE_EXTRAS+" WHERE option_id = ?;", optionId)
+	res, err := Db.Query("SELECT * FROM "+TableExtras+" WHERE option_id = ?;", optionId)
 	if err != nil {
 		return make([]OptionExtras, 0), fmt.Errorf("GetOptionExtras %d: %v", optionId, err)
 	}

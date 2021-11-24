@@ -20,7 +20,7 @@ func (m *MySQLUsersRepository) Init(db *sql.DB) {
 // GetUser Does not support empty values!
 func (m *MySQLUsersRepository) GetUser(conditions User, createIfDoesNotExist bool) (*User, error) {
 	condition, values := ObjectToSQLCondition(AND, conditions, false)
-	row := m.Db.QueryRow("SELECT * FROM "+TABLE_USERS+" WHERE "+condition+";", values...)
+	row := m.Db.QueryRow("SELECT * FROM "+TableUsers+" WHERE "+condition+";", values...)
 
 	var user User
 	if err := row.Scan(&user.Id, &user.Email, &user.CreateDate); err != nil {
@@ -36,7 +36,7 @@ func (m *MySQLUsersRepository) GetUser(conditions User, createIfDoesNotExist boo
 }
 
 func (m *MySQLUsersRepository) CreateUser(user User) (*User, error) {
-	res, err := m.Db.Exec("INSERT INTO "+TABLE_USERS+" (`email`) VALUES (?);", user.Email)
+	res, err := m.Db.Exec("INSERT INTO "+TableUsers+" (`email`) VALUES (?);", user.Email)
 	if err != nil {
 		return nil, fmt.Errorf("CreateUser %v: %v", user, err)
 	}
