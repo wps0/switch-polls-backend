@@ -76,13 +76,20 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// OK
-	voteId, err := db.InsertVote(email, reqData.OptionId)
+	user, err := db.UsersRepo.GetUser(db.User{Email: email}, false)
+	if err != nil {
+		log.Printf("PollVoteHandler get user (email: %s) error: %v\n", email, err)
+	}
+	vote, err := db.VotesRepo.CreateVote(db.PollVote{
+		UserId:   user.Id,
+		OptionId: reqData.OptionId,
+	})
 	if err != nil {
 		log.Printf("cannot insert the vote of user %s on poll option %d. error: %v", email, reqData.OptionId, err)
 		WriteBadRequestResponse(&w)
 		return
 	}
-	token, err := CreateVoteToken(voteId)
+	token, err := CreateVoteToken(vote.Id)
 
 	poll, err := db.PollsRepo.GetPoll(db.Poll{Id: option.PollId}, false)
 	if err != nil {

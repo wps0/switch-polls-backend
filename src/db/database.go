@@ -207,22 +207,6 @@ WHERE O.poll_id = ? AND V.confirmed = 1 AND U.id = ?;`, pollId, userId)
 	return res.Next(), res.Err()
 }
 
-func InsertVote(userEmail string, optId int) (int, error) {
-	user, err := UsersRepo.GetUser(User{Email: userEmail}, true)
-	if err != nil {
-		return 0, err
-	}
-	res, err := Db.Exec("INSERT INTO "+TABLE_VOTES+"(user_id, option_id) VALUES (?, ?);", user.Id, optId)
-	if err != nil {
-		return 0, err
-	}
-	var insertId int64
-	if insertId, err = res.LastInsertId(); err != nil {
-		return 0, err
-	}
-	return int(insertId), nil
-}
-
 func InsertToken(token string, voteId int) error {
 	res, err := Db.Exec("INSERT INTO "+TableConfirmations+"(token, vote_id) VALUES ('"+token+"', ?);", voteId)
 	if err != nil {

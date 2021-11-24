@@ -30,7 +30,11 @@ func ObjectToSQLCondition(linkingWord LinkingWord, obj interface{}, permitDefaul
 		if !isFirst {
 			condition += " " + linkingWord.String() + " "
 		}
-		condition += "`" + objType.Field(i).Name + "` = ?"
+		name := objType.Field(i).Tag.Get("db")
+		if name == "" {
+			name = objType.Field(i).Name
+		}
+		condition += "`" + name + "` = ?"
 		args = append(args, objValue.Field(i).Interface())
 
 		isFirst = false

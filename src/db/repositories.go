@@ -2,6 +2,7 @@ package db
 
 var UsersRepo MySQLUsersRepository
 var PollsRepo MySQLPollsRepository
+var VotesRepo MySQLVotesRepository
 
 type UsersRepository interface {
 	GetUser(user User, createIfDoesNotExist bool) (*User, error)
