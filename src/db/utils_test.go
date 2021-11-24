@@ -7,19 +7,20 @@ type PairIS struct {
 	Output string
 }
 
-func TestObjectToSQLConditionDontPermitDefault(t *testing.T) {
+func TestObjectToSQLConditionAndDontPermitDefault(t *testing.T) {
 	InputData := [...]PairIS{
 		{User{
-			Id:    4,
-			Email: "232",
-		}, "`Id` = ? AND `Email` = ?"},
+			Id:         4,
+			Email:      "232",
+			CreateDate: 213,
+		}, "`id` = ? AND `email` = ? AND `create_date` = ?"},
 		{User{
 			Id:    0,
 			Email: "232",
-		}, "`Email` = ?"},
+		}, "`email` = ?"},
 		{User{
 			Email: "232",
-		}, "`Email` = ?"},
+		}, "`email` = ?"},
 	}
 
 	for _, data := range InputData {
@@ -30,19 +31,26 @@ func TestObjectToSQLConditionDontPermitDefault(t *testing.T) {
 	}
 }
 
-func TestObjectToSQLConditionPermitDefault(t *testing.T) {
+func TestObjectToSQLConditionAndPermitDefault(t *testing.T) {
 	InputData := [...]PairIS{
 		{User{
-			Id:    4,
-			Email: "232",
-		}, "`Id` = ? AND `Email` = ? AND `CreateDate` = ?"},
+			Id:         4,
+			Email:      "232",
+			CreateDate: 32131,
+		}, "`id` = ? AND `email` = ? AND `create_date` = ?"},
 		{User{
 			Id:    0,
 			Email: "232",
-		}, "`Id` = ? AND `Email` = ? AND `CreateDate` = ?"},
+		}, "`id` = ? AND `email` = ? AND `create_date` = ?"},
 		{User{
 			Email: "232",
-		}, "`Id` = ? AND `Email` = ? AND `CreateDate` = ?"},
+		}, "`id` = ? AND `email` = ? AND `create_date` = ?"},
+		{
+			Poll{
+				Options: []PollOption{},
+			},
+			"`id` = ? AND `title` = ? AND `description` = ? AND `create_time` = ?",
+		},
 	}
 
 	for _, data := range InputData {
@@ -51,5 +59,30 @@ func TestObjectToSQLConditionPermitDefault(t *testing.T) {
 			t.Errorf("Test failed! Input: %v, expected output: %v, real output: %v\n", data.Input, data.Output, output)
 		}
 	}
+}
 
+func TestObjectToSQLConditionOrPermitDefault(t *testing.T) {
+	InputData := [...]PairIS{
+		{User{
+			Id:         4,
+			Email:      "232",
+			CreateDate: 32131,
+		}, "`id` = ? OR `email` = ? OR `create_date` = ?"},
+		{User{
+			Email: "232",
+		}, "`id` = ? OR `email` = ? OR `create_date` = ?"},
+		{
+			Poll{
+				Options: []PollOption{},
+			},
+			"`id` = ? OR `title` = ? OR `description` = ? OR `create_time` = ?",
+		},
+	}
+
+	for _, data := range InputData {
+		output, _ := ObjectToSQLCondition(OR, data.Input, true)
+		if output != data.Output {
+			t.Errorf("Test failed! Input: %v, expected output: %v, real output: %v\n", data.Input, data.Output, output)
+		}
+	}
 }
