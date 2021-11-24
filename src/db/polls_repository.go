@@ -68,7 +68,6 @@ func (m *MySQLPollsRepository) GetPollOptions(pollId int, recursiveMode bool) ([
 		return nil, fmt.Errorf("GetPollOptions %d: %v", pollId, err)
 	}
 	defer rows.Close()
-	// Loop through rows, using Scan to assign column data to struct fields.
 	options := make([]PollOption, 0)
 	for rows.Next() {
 		var opt PollOption
