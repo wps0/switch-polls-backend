@@ -41,7 +41,7 @@ func VerifyToken(token string) error {
 	if err != nil {
 		return err
 	}
-	vote, err := db.GetVoteById(cnf.VoteId)
+	vote, err := db.VotesRepo.GetVote(db.PollVote{Id: cnf.VoteId})
 	if err != nil {
 		return err
 	}

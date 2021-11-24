@@ -102,7 +102,8 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 		Receiver:    email,
 		ServiceName: "SWITCH POLLS",
 		VoteOption:  option.Content, // TODO: limit the length to n chars and append '...' to the end if the threshold is reached
-		PollTitle:   poll.Title + "(id: " + strconv.Itoa(poll.Id) + ")",
+		PollTitle:   poll.Title,
+		PollId:      strconv.Itoa(poll.Id),
 		Link:        GetConfirmationUrl(token),
 	})
 	err = utils.SendEmail(&config.Cfg.EmailConfig, config.Cfg.EmailConfig.EmailSubject, template, email)
@@ -145,7 +146,7 @@ func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vote, err := db.GetVoteById(cnf.VoteId)
+	vote, err := db.VotesRepo.GetVote(db.PollVote{Id: cnf.VoteId})
 	var option db.PollOption
 	if err != nil {
 		log.Println("vote by id error", err)

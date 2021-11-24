@@ -24,6 +24,7 @@ type EmailTemplateValues struct {
 	ServiceName string
 	VoteOption  string
 	PollTitle   string
+	PollId      string
 	Link        string
 }
 
