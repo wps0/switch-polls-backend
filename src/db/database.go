@@ -135,19 +135,9 @@ func InitDb() {
 	log.Println("Repositories initialised.")
 }
 
-func GetVoteById(id int) (*PollVote, error) {
-	var vote PollVote
-	err := Db.QueryRow("SELECT * FROM "+TableVotes+" WHERE id = ?;", id).Scan(&vote.Id, &vote.UserId, &vote.OptionId, &vote.Confirmed, &vote.ConfirmedAt, &vote.CreateDate)
-	if err != nil {
-		return nil, err
-	}
-
-	return &vote, nil
-}
-
 func GetConfirmationByToken(token string) (*Confirmation, error) {
 	var cnf Confirmation
-	err := Db.QueryRow("SELECT * FROM "+TableConfirmations+" WHERE token = '"+token+"';").Scan(&cnf.Token, &cnf.VoteId, &cnf.CreateDate)
+	err := Db.QueryRow("SELECT * FROM "+TableConfirmations+" WHERE token = ?;", token).Scan(&cnf.Token, &cnf.VoteId, &cnf.CreateDate)
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +198,7 @@ WHERE O.poll_id = ? AND V.confirmed = 1 AND U.id = ?;`, pollId, userId)
 }
 
 func InsertToken(token string, voteId int) error {
-	res, err := Db.Exec("INSERT INTO "+TableConfirmations+"(token, vote_id) VALUES ('"+token+"', ?);", voteId)
+	res, err := Db.Exec("INSERT INTO "+TableConfirmations+"(token, vote_id) VALUES (?, ?);", token, voteId)
 	if err != nil {
 		return err
 	}
