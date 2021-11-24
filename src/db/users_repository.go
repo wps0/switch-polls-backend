@@ -3,8 +3,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"log"
-	"switch-polls-backend/config"
 )
 
 type MySQLUsersRepository struct {
@@ -15,48 +13,8 @@ func NewMySQLUsersRepository() MySQLUsersRepository {
 	return MySQLUsersRepository{}
 }
 
-func (m *MySQLUsersRepository) Init(cfg *config.Configuration) {
-	m.Db = m.InitDb(cfg.DbString)
-}
-
-func (m *MySQLUsersRepository) InitDb(dbString string) *sql.DB {
-	log.Println("Initialising database")
-	db, err := sql.Open("mysql", dbString)
-	if err != nil {
-		panic(err.Error())
-	}
-	err = db.Ping()
-	if err != nil {
-		panic(err.Error())
-	}
-
-	_, err = db.Exec(CREATE_TABLE_USERS_QUERY)
-	if err != nil {
-		panic(err)
-	}
-	_, err = db.Exec(CREATE_TABLE_POLLS_QUERY)
-	if err != nil {
-		panic(err)
-	}
-	_, err = db.Exec(CREATE_TABLE_OPTIONS_QUERY)
-	if err != nil {
-		panic(err)
-	}
-	_, err = db.Exec(CREATE_TABLE_EXTRAS_QUERY)
-	if err != nil {
-		panic(err)
-	}
-	_, err = db.Exec(CREATE_TABLE_VOTES_QUERY)
-	if err != nil {
-		panic(err)
-	}
-	_, err = db.Exec(CREATE_TABLE_VOTE_CONFIRMATIONS_QUERY)
-	if err != nil {
-		panic(err)
-	}
-
-	log.Println("Database initialised")
-	return db
+func (m *MySQLUsersRepository) Init(db *sql.DB) {
+	m.Db = db
 }
 
 // GetUser Does not support empty values!

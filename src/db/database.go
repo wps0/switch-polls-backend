@@ -94,10 +94,8 @@ CREATE TABLE IF NOT EXISTS ` + "`" + TABLE_CONFIRMATIONS + "`" + ` (
 )
 
 func InitDb() {
-	log.Println("Initialising database")
+	log.Println("Initialising database...")
 	db, err := sql.Open("mysql", config.Cfg.DbString)
-	usersRepo = NewMySQLUsersRepository()
-	usersRepo.Init(config.Cfg)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -127,77 +125,14 @@ func InitDb() {
 	if err != nil {
 		panic(err)
 	}
-	log.Println("Database initialised")
-}
+	log.Println("Database initialised.")
+	log.Println("Initialising repositories...")
 
-func GetOptionExtrasByOptionId(optId int) ([]OptionExtras, error) {
-	res, err := Db.Query("SELECT * FROM "+TABLE_EXTRAS+" WHERE option_id = ?;", optId)
-	if err != nil {
-		return make([]OptionExtras, 0), err
-	}
-	defer res.Close()
-
-	var extras = make([]OptionExtras, 0)
-	for res.Next() {
-		var opt OptionExtras
-		var tmp int
-		err = res.Scan(&tmp, &tmp, &opt.Type, &opt.Value)
-
-		if err != nil {
-			log.Println("option extras scan error (optionId:", optId, "): ", err)
-			return make([]OptionExtras, 0), err
-		}
-		extras = append(extras, opt)
-	}
-	return extras, nil
-}
-
-func GetOptionsByPollId(pollId int) ([]PollOption, error) {
-	res, err := Db.Query("SELECT * FROM "+TABLE_OPTIONS+" WHERE poll_id = ?;", pollId)
-	if err != nil {
-		return make([]PollOption, 0), err
-	}
-	defer res.Close()
-
-	var options = make([]PollOption, 0)
-	for res.Next() {
-		var opt PollOption
-		var tmp int
-		err = res.Scan(&opt.Id, &tmp, &opt.Content)
-
-		if err != nil {
-			log.Println("option scan error (pollId:", pollId, "): ", err)
-			return make([]PollOption, 0), err
-		}
-		opt.Extras, _ = GetOptionExtrasByOptionId(opt.Id)
-		options = append(options, opt)
-	}
-	return options, nil
-}
-
-func GetPollById(id int) (*Poll, error) {
-	var poll Poll
-	err := Db.QueryRow("SELECT * FROM "+TABLE_POLLS+" WHERE id = ?;", id).Scan(&poll.Id, &poll.Title, &poll.Description, &poll.CreateTime)
-	if err != nil {
-		return nil, err
-	}
-
-	poll.Options, err = GetOptionsByPollId(id)
-	if err != nil {
-		log.Println("Get options by poll id error: ", err)
-		return nil, nil
-	}
-
-	return &poll, nil
-}
-
-func GetPollIdByOptionId(id int) (int, error) {
-	var pollId int
-	err := Db.QueryRow("SELECT poll_id FROM "+TABLE_OPTIONS+" WHERE id = ?;", id).Scan(&pollId)
-	if err != nil {
-		return 0, err
-	}
-	return pollId, nil
+	UsersRepo = NewMySQLUsersRepository()
+	PollsRepo = NewMySQLPollsRepository()
+	UsersRepo.Init(db)
+	PollsRepo.Init(db)
+	log.Println("Repositories initialised.")
 }
 
 func GetVoteById(id int) (*PollVote, error) {
@@ -246,7 +181,7 @@ func CheckIfUserHasAlreadyVoted(userEmail string, pollId int) (bool, error) {
 	if !utils.IsAlphaWithAtAndDot(userEmail) {
 		return false, errors.New("invalid email format")
 	}
-	user, err := usersRepo.GetUser(User{
+	user, err := UsersRepo.GetUser(User{
 		Email: userEmail,
 	}, false)
 	if err != nil {
@@ -273,7 +208,7 @@ WHERE O.poll_id = ? AND V.confirmed = 1 AND U.id = ?;`, pollId, userId)
 }
 
 func InsertVote(userEmail string, optId int) (int, error) {
-	user, err := usersRepo.GetUser(User{Email: userEmail}, true)
+	user, err := UsersRepo.GetUser(User{Email: userEmail}, true)
 	if err != nil {
 		return 0, err
 	}

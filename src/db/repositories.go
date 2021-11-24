@@ -1,6 +1,7 @@
 package db
 
-var usersRepo MySQLUsersRepository
+var UsersRepo MySQLUsersRepository
+var PollsRepo MySQLPollsRepository
 
 type UsersRepository interface {
 	GetUser(user User, createIfDoesNotExist bool) (*User, error)
@@ -9,7 +10,7 @@ type UsersRepository interface {
 }
 
 type PollsRepository interface {
-	GetPoll(poll Poll) (*Poll, error)
+	GetPoll(poll Poll, recursiveMode bool) (*Poll, error)
 	CreatePoll(poll Poll) (*Poll, error)
 	UpdatePoll(poll Poll) (*Poll, error)
 }
