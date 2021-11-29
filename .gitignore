@@ -120,3 +120,4 @@ pkg/
 config.json
 config.remote.json
 build/
+bin/

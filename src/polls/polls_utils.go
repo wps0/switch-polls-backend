@@ -20,11 +20,8 @@ func WriteBadRequestResponse(w *http.ResponseWriter) {
 	(*w).Write(msg)
 }
 
-func UsernameToEmail(username string) (string, error) {
-	if !utils.IsAlpha(username) {
-		return "", errors.New("username can only contain alphanumeric characters")
-	}
-	return username + "@" + config.Cfg.EmailConfig.OrganizationDomain, nil
+func UsernameToEmail(username string) string {
+	return username + "@" + config.Cfg.EmailConfig.OrganizationDomain
 }
 
 func CreateVoteToken(voteId int) (string, error) {
@@ -41,15 +38,15 @@ func VerifyToken(token string) error {
 	if err != nil {
 		return err
 	}
-	vote, err := db.GetVoteById(cnf.VoteId)
+	vote, err := db.VotesRepo.GetVote(db.PollVote{Id: cnf.VoteId})
 	if err != nil {
 		return err
 	}
-	pollId, err := db.GetPollIdByOptionId(vote.OptionId)
+	option, err := db.PollsRepo.GetPollOption(db.PollOption{Id: vote.OptionId}, false)
 	if err != nil {
 		return err
 	}
-	res, err := db.CheckIfUserHasAlreadyVotedById(vote.UserId, pollId)
+	res, err := db.CheckIfUserHasAlreadyVotedById(vote.UserId, option.PollId)
 	if err != nil {
 		return err
 	}

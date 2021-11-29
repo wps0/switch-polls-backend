@@ -71,35 +71,21 @@ var defaultConfig = Configuration{
 
 // flags
 var configPath string
-var createDefaultConfig bool
 var DevMode bool
 
 func InitConfig() {
+	log.Println("Initialising config...")
 	var err error
-	flag.StringVar(&configPath, "cfg", "./config.json", "The path to a config file.")
-	flag.BoolVar(&createDefaultConfig, "d", false, "Indicates whether the default config file should "+
-		"be created. If so, the application terminates after having created it..")
-	flag.BoolVar(&DevMode, "dev", false, "Enable development mode")
+	flag.StringVar(&configPath, "cfg", "./config.json", "The path to the config file.")
+	flag.BoolVar(&DevMode, "dev", false, "Enable development mode.")
 	flag.Parse()
 
-	if createDefaultConfig {
-		f, err := os.OpenFile(configPath, os.O_WRONLY|os.O_CREATE, 0740)
-		defer f.Close()
-		if err != nil {
-			log.Fatalf("Failed to create config file! Error: %s\n", err)
-			return
-		}
-		var data []byte
-		data, err = json.MarshalIndent(defaultConfig, "", "  ")
-		if err != nil {
-			log.Fatalf("Failed to create config file! Error: %s\n", err)
-			return
-		}
-		_, err = f.Write(data)
-		if err != nil {
-			log.Fatalf("Failed to create config file! Error: %s\n", err)
-			return
-		}
+	f, err := os.Open(configPath)
+	if os.IsNotExist(err) {
+		log.Printf("No config file found in %s (the path is customisable via -cfg <path> argument)", configPath)
+		createConfig(configPath)
+	} else {
+		log.Printf("Found a file (possibly config) in '%s'", configPath)
 		f.Close()
 	}
 
@@ -109,16 +95,44 @@ func InitConfig() {
 		return
 	}
 	log.Printf("Config loaded!")
+	//
+	//log.Printf("Validating the sender email address %s...", Cfg.EmailConfig.SenderEmail)
+	//err = checkmail.ValidateHostAndUser(Cfg.EmailConfig.SmtpHost, Cfg.EmailConfig.SenderEmail, Cfg.EmailConfig.SenderEmail)
+	//if err != nil {
+	//	log.Fatalf("Failed to validate the sender's email address %v", err)
+	//	return
+	//}
+	log.Printf("Config initialised!")
 }
 
-func loadConfiguration(conf_path string) (*Configuration, error) {
+func createConfig(path string) {
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0740)
+	defer f.Close()
+	if err != nil {
+		log.Fatalf("Failed to create config file! Error: %s\n", err)
+		return
+	}
+	var data []byte
+	data, err = json.MarshalIndent(defaultConfig, "", "  ")
+	if err != nil {
+		log.Fatalf("Failed to create config file! Error: %s\n", err)
+		return
+	}
+	_, err = f.Write(data)
+	if err != nil {
+		log.Fatalf("Failed to create config file! Error: %s\n", err)
+		return
+	}
+}
+
+func loadConfiguration(path string) (*Configuration, error) {
 	conf := &Configuration{}
-	cfg_file, err := os.Open(conf_path)
+	cfgFile, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	defer cfg_file.Close()
-	d := json.NewDecoder(cfg_file)
+	defer cfgFile.Close()
+	d := json.NewDecoder(cfgFile)
 	err = d.Decode(conf)
 	if err != nil {
 		return nil, err

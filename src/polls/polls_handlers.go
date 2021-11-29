@@ -16,12 +16,12 @@ func PollHandler(w http.ResponseWriter, r *http.Request) {
 	args := mux.Vars(r)
 	_id, err := strconv.Atoi(args["id"])
 	if err != nil {
-		log.Printf("PollHandler > Error when converting id to a string")
+		log.Printf("PollHandler error when converting id to a string: %v", err)
 		WriteBadRequestResponse(&w)
 		return
 	}
 
-	res, err := db.GetPollById(_id)
+	res, err := db.PollsRepo.GetPoll(db.Poll{Id: _id}, true)
 	if err != nil || res == nil || res.Id != _id {
 		w.WriteHeader(http.StatusNotFound)
 		resp, _ := utils.PrepareResponse("the poll with the given id was not found")
@@ -46,25 +46,35 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 	var reqData VoteRequest
 	err = json.Unmarshal(body, &reqData)
 	if err != nil {
-		log.Println("failed to unmarshal body request data", err)
+		log.Println("PollVoteHandler failed to unmarshal body request data", err)
 		WriteBadRequestResponse(&w)
 		return
 	}
-	email, err := UsernameToEmail(reqData.UserData.Username)
-	if err != nil || !utils.VerifyUsername(reqData.UserData.Username) {
-		log.Println("cannot convert username to an email")
+	if !utils.ValidateUsername(reqData.UserData.Username) {
+		log.Println("PollVoteHandler invalid username format")
+		WriteBadRequestResponse(&w)
+		return
+	}
+	email := UsernameToEmail(reqData.UserData.Username)
+	if err = utils.ValidateEmail(email); err != nil {
+		log.Printf("PollVoteHandler failed to verify the email address '%s'. error: %v", email, err)
 		WriteBadRequestResponse(&w)
 		return
 	}
 
-	pollId, err := db.GetPollIdByOptionId(reqData.OptionId)
-	if pollId <= 0 || err != nil {
-		log.Println("option id was not found or other error has occurred. error: ", err)
+	option, err := db.PollsRepo.GetPollOption(db.PollOption{Id: reqData.OptionId}, false) //db.GetPollIdByOptionId(reqData.OptionId)
+	if err != nil || option.PollId <= 0 {
+		log.Println("PollVoteHandler error: ", err)
 		WriteBadRequestResponse(&w)
 		return
 	}
 
-	voted, err := db.CheckIfUserHasAlreadyVoted(email, pollId)
+	user, err := db.UsersRepo.GetUser(db.User{Email: email}, true)
+	if err != nil {
+		log.Printf("PollVoteHandler get user (email: %s) error: %v\n", email, err)
+	}
+
+	voted, err := db.CheckIfUserHasAlreadyVotedById(user.Id, option.PollId)
 	if voted {
 		w.WriteHeader(http.StatusForbidden)
 		w.Write([]byte("user has already voted"))
@@ -76,19 +86,30 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// OK
-	voteId, err := db.InsertVote(email, reqData.OptionId)
+	vote, err := db.VotesRepo.CreateVote(db.PollVote{
+		UserId:   user.Id,
+		OptionId: reqData.OptionId,
+	})
 	if err != nil {
 		log.Printf("cannot insert the vote of user %s on poll option %d. error: %v", email, reqData.OptionId, err)
 		WriteBadRequestResponse(&w)
 		return
 	}
-	token, err := CreateVoteToken(voteId)
+	token, err := CreateVoteToken(vote.Id)
+
+	poll, err := db.PollsRepo.GetPoll(db.Poll{Id: option.PollId}, false)
+	if err != nil {
+		log.Printf("PollVoteHandler cannog get the poll with id %v - vote request by user %s on option option %d. error: %v", option.PollId, email, reqData.OptionId, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	template := utils.FillEmailTemplate(utils.EmailTemplateValues{
 		Receiver:    email,
 		ServiceName: "SWITCH POLLS",
-		VoteOption:  strconv.Itoa(reqData.OptionId),
-		PollTitle:   strconv.Itoa(pollId),
+		VoteOption:  option.Content, // TODO: limit the length to n chars and append '...' to the end if the threshold is reached
+		PollTitle:   poll.Title,
+		PollId:      strconv.Itoa(poll.Id),
 		Link:        GetConfirmationUrl(token),
 	})
 	err = utils.SendEmail(&config.Cfg.EmailConfig, config.Cfg.EmailConfig.EmailSubject, template, email)
@@ -131,14 +152,14 @@ func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vote, err := db.GetVoteById(cnf.VoteId)
-	pollId := 0
+	vote, err := db.VotesRepo.GetVote(db.PollVote{Id: cnf.VoteId})
+	var option db.PollOption
 	if err != nil {
 		log.Println("vote by id error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	} else {
-		pollId, err = db.GetPollIdByOptionId(vote.OptionId)
+		option, err = db.PollsRepo.GetPollOption(db.PollOption{Id: vote.OptionId}, false) //db.GetPollIdByOptionId(vote.OptionId)
 		if err != nil {
 			log.Println("cannot get pollId by option id when confirming user's vote", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -147,7 +168,8 @@ func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res, _ := utils.PrepareResponse("Zarejestrowano glos!")
-	w.Header().Set("Location", config.Cfg.WebConfig.TokenVerificationRedirectLocation+strconv.Itoa(pollId))
+	// TODO: use templates instead of gluing the id to the end
+	w.Header().Set("Location", config.Cfg.WebConfig.TokenVerificationRedirectLocation+strconv.Itoa(option.PollId))
 	w.WriteHeader(http.StatusSeeOther)
 	w.Write(res)
 }
@@ -155,7 +177,7 @@ func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
 func PollResultsHandler(w http.ResponseWriter, r *http.Request) {
 	args := mux.Vars(r)
 	id, _ := strconv.Atoi(args["id"])
-	poll, err := db.GetPollById(id)
+	poll, err := db.PollsRepo.GetPoll(db.Poll{Id: id}, false)
 	if err != nil {
 		WriteBadRequestResponse(&w)
 		return
