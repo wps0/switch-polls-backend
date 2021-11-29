@@ -69,7 +69,12 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	voted, err := db.CheckIfUserHasAlreadyVoted(email, option.PollId)
+	user, err := db.UsersRepo.GetUser(db.User{Email: email}, true)
+	if err != nil {
+		log.Printf("PollVoteHandler get user (email: %s) error: %v\n", email, err)
+	}
+
+	voted, err := db.CheckIfUserHasAlreadyVotedById(user.Id, option.PollId)
 	if voted {
 		w.WriteHeader(http.StatusForbidden)
 		w.Write([]byte("user has already voted"))
@@ -81,10 +86,6 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// OK
-	user, err := db.UsersRepo.GetUser(db.User{Email: email}, false)
-	if err != nil {
-		log.Printf("PollVoteHandler get user (email: %s) error: %v\n", email, err)
-	}
 	vote, err := db.VotesRepo.CreateVote(db.PollVote{
 		UserId:   user.Id,
 		OptionId: reqData.OptionId,

@@ -2,11 +2,9 @@ package db
 
 import (
 	"database/sql"
-	"errors"
 	_ "github.com/go-sql-driver/mysql"
 	"log"
 	"switch-polls-backend/config"
-	"switch-polls-backend/utils"
 	"time"
 )
 
@@ -73,11 +71,11 @@ CREATE TABLE IF NOT EXISTS ` + "`" + TableVotes + "`" + ` (
 	INDEX fk_votes_opt_ix (option_id),
 	FOREIGN KEY fk_votes_usr_ix(user_id)
         REFERENCES ` + TableUsers + `(id)
-        ON DELETE SET NULL
+        ON DELETE CASCADE
 		ON UPDATE CASCADE,
 	FOREIGN KEY fk_votes_opt_ix(option_id)
         REFERENCES ` + TableOptions + `(id)
-        ON DELETE SET NULL
+        ON DELETE CASCADE
 		ON UPDATE CASCADE
 );`
 	CreateTableVoteConfirmationsQuery = `
@@ -130,8 +128,10 @@ func InitDb() {
 
 	UsersRepo = NewMySQLUsersRepository()
 	PollsRepo = NewMySQLPollsRepository()
+	VotesRepo = NewMySQLVotesRepository()
 	UsersRepo.Init(db)
 	PollsRepo.Init(db)
+	VotesRepo.Init(db)
 	log.Println("Repositories initialised.")
 }
 
@@ -165,19 +165,6 @@ WHERE O.poll_id = ? AND confirmed = 1 GROUP BY O.id;`, pollId)
 		summary = append(summary, result)
 	}
 	return &ResultsSummary{summary}, nil
-}
-
-func CheckIfUserHasAlreadyVoted(userEmail string, pollId int) (bool, error) {
-	if !utils.IsAlphaWithAtAndDot(userEmail) {
-		return false, errors.New("invalid email format")
-	}
-	user, err := UsersRepo.GetUser(User{
-		Email: userEmail,
-	}, false)
-	if err != nil {
-		return false, err
-	}
-	return CheckIfUserHasAlreadyVotedById(user.Id, pollId)
 }
 
 func CheckIfUserHasAlreadyVotedById(userId int, pollId int) (bool, error) {

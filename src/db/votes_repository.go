@@ -6,6 +6,15 @@ import (
 )
 
 type MySQLVotesRepository struct {
+	db *sql.DB
+}
+
+func NewMySQLVotesRepository() MySQLVotesRepository {
+	return MySQLVotesRepository{}
+}
+
+func (m *MySQLVotesRepository) Init(Db *sql.DB) {
+	m.db = Db
 }
 
 func (m *MySQLVotesRepository) GetVote(vote PollVote) (*PollVote, error) {
