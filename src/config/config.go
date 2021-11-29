@@ -74,6 +74,7 @@ var configPath string
 var DevMode bool
 
 func InitConfig() {
+	log.Println("Initialising config...")
 	var err error
 	flag.StringVar(&configPath, "cfg", "./config.json", "The path to the config file.")
 	flag.BoolVar(&DevMode, "dev", false, "Enable development mode.")
@@ -94,6 +95,14 @@ func InitConfig() {
 		return
 	}
 	log.Printf("Config loaded!")
+	//
+	//log.Printf("Validating the sender email address %s...", Cfg.EmailConfig.SenderEmail)
+	//err = checkmail.ValidateHostAndUser(Cfg.EmailConfig.SmtpHost, Cfg.EmailConfig.SenderEmail, Cfg.EmailConfig.SenderEmail)
+	//if err != nil {
+	//	log.Fatalf("Failed to validate the sender's email address %v", err)
+	//	return
+	//}
+	log.Printf("Config initialised!")
 }
 
 func createConfig(path string) {

@@ -14,6 +14,7 @@ import (
 	"strings"
 	"switch-polls-backend/config"
 
+	"github.com/badoux/checkmail"
 	"github.com/google/uuid"
 )
 
@@ -89,8 +90,15 @@ func GetListeningAddress() string {
 	return config.Cfg.WebConfig.ListeningAddress + ":" + strconv.Itoa(int(config.Cfg.WebConfig.Port))
 }
 
-func VerifyUsername(s string) bool {
+func ValidateUsername(s string) bool {
 	return IsAlpha(s)
+}
+
+func ValidateEmail(email string) error {
+	//if config.Cfg.EmailConfig.ExtendedEmailValidation {
+	//	return checkmail.ValidateHostAndUser(config.Cfg.EmailConfig.OrganizationDomain + strconv.Itoa(config.Cfg.EmailConfig.SmtpPort), config.Cfg.EmailConfig.SenderEmail, email)
+	//}
+	return checkmail.ValidateFormat(email)
 }
 
 func SendEmail(conf *config.EmailConfiguration, subject string, msg string, receiver string) error {

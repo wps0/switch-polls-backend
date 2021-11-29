@@ -20,11 +20,8 @@ func WriteBadRequestResponse(w *http.ResponseWriter) {
 	(*w).Write(msg)
 }
 
-func UsernameToEmail(username string) (string, error) {
-	if !utils.IsAlpha(username) {
-		return "", errors.New("username can only contain alphanumeric characters")
-	}
-	return username + "@" + config.Cfg.EmailConfig.OrganizationDomain, nil
+func UsernameToEmail(username string) string {
+	return username + "@" + config.Cfg.EmailConfig.OrganizationDomain
 }
 
 func CreateVoteToken(voteId int) (string, error) {

@@ -16,7 +16,7 @@ func PollHandler(w http.ResponseWriter, r *http.Request) {
 	args := mux.Vars(r)
 	_id, err := strconv.Atoi(args["id"])
 	if err != nil {
-		log.Printf("PollHandler > Error when converting id to a string")
+		log.Printf("PollHandler error when converting id to a string: %v", err)
 		WriteBadRequestResponse(&w)
 		return
 	}
@@ -46,20 +46,25 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 	var reqData VoteRequest
 	err = json.Unmarshal(body, &reqData)
 	if err != nil {
-		log.Println("failed to unmarshal body request data", err)
+		log.Println("PollVoteHandler failed to unmarshal body request data", err)
 		WriteBadRequestResponse(&w)
 		return
 	}
-	email, err := UsernameToEmail(reqData.UserData.Username)
-	if err != nil || !utils.VerifyUsername(reqData.UserData.Username) {
-		log.Println("cannot convert username to an email")
+	if !utils.ValidateUsername(reqData.UserData.Username) {
+		log.Println("PollVoteHandler invalid username format")
+		WriteBadRequestResponse(&w)
+		return
+	}
+	email := UsernameToEmail(reqData.UserData.Username)
+	if err = utils.ValidateEmail(email); err != nil {
+		log.Printf("PollVoteHandler failed to verify the email address '%s'. error: %v", email, err)
 		WriteBadRequestResponse(&w)
 		return
 	}
 
 	option, err := db.PollsRepo.GetPollOption(db.PollOption{Id: reqData.OptionId}, false) //db.GetPollIdByOptionId(reqData.OptionId)
 	if err != nil || option.PollId <= 0 {
-		log.Println("option id was not found or other error has occurred. error: ", err)
+		log.Println("PollVoteHandler error: ", err)
 		WriteBadRequestResponse(&w)
 		return
 	}
