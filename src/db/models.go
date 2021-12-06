@@ -28,7 +28,6 @@ type PollVote struct {
 	Id          int           `db:"id"`
 	UserId      int           `db:"user_id"`
 	OptionId    int           `db:"option_id"`
-	Confirmed   bool          `db:"confirmed"`
 	ConfirmedAt sql.NullInt64 `db:"confirmed_at"`
 	CreateDate  int64         `db:"create_date"`
 }

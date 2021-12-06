@@ -10,6 +10,7 @@ import (
 	"switch-polls-backend/config"
 	"switch-polls-backend/db"
 	"switch-polls-backend/utils"
+	"time"
 )
 
 func PollHandler(w http.ResponseWriter, r *http.Request) {
@@ -145,7 +146,7 @@ func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = db.ChangeConfirmationStatus(cnf.VoteId, true)
+	err = db.ChangeConfirmationStatus(cnf.VoteId, time.Now().Unix())
 	if err != nil {
 		log.Println("cannot change confirmation status", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -159,7 +160,7 @@ func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	} else {
-		option, err = db.PollsRepo.GetPollOption(db.PollOption{Id: vote.OptionId}, false) //db.GetPollIdByOptionId(vote.OptionId)
+		option, err = db.PollsRepo.GetPollOption(db.PollOption{Id: vote.OptionId}, false)
 		if err != nil {
 			log.Println("cannot get pollId by option id when confirming user's vote", err)
 			w.WriteHeader(http.StatusInternalServerError)
