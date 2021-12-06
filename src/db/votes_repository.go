@@ -21,7 +21,7 @@ func (m *MySQLVotesRepository) GetVote(vote PollVote) (*PollVote, error) {
 	condition, args := ObjectToSQLCondition(AND, vote, false)
 	row := Db.QueryRow("SELECT * FROM "+TableVotes+" WHERE "+condition+";", args...)
 	var resVote PollVote
-	if err := row.Scan(&resVote.Id, &resVote.UserId, &resVote.OptionId, &resVote.Confirmed, &resVote.ConfirmedAt, &resVote.CreateDate); err != nil {
+	if err := row.Scan(&resVote.Id, &resVote.UserId, &resVote.OptionId, &resVote.ConfirmedAt, &resVote.CreateDate); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("GetVote: vote %v not found %v", vote, err)
 		}

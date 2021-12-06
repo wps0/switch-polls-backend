@@ -5,7 +5,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"log"
 	"switch-polls-backend/config"
-	"time"
 )
 
 var Db *sql.DB
@@ -58,13 +57,11 @@ CREATE TABLE IF NOT EXISTS ` + "`" + TableExtras + "`" + ` (
         ON DELETE CASCADE
 		ON UPDATE CASCADE
 );`
-	//TODO: usunac confirmed
 	CreateTableVotesQuery = `
 CREATE TABLE IF NOT EXISTS ` + "`" + TableVotes + "`" + ` (
 	id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
 	user_id INT NULL,
 	option_id INT NULL,
-	confirmed BOOLEAN DEFAULT false,
 	confirmed_at BIGINT NULL,
 	create_date BIGINT DEFAULT UNIX_TIMESTAMP(),
 	INDEX fk_votes_usr_ix (user_id),
@@ -149,7 +146,7 @@ func PrepareResultsSummary(pollId int) (*ResultsSummary, error) {
 	res, err := Db.Query(`
 SELECT O.id, O.content, COUNT(*) 
 FROM `+TableVotes+` V INNER JOIN `+TableOptions+` O ON V.option_id = O.id 
-WHERE O.poll_id = ? AND confirmed = 1 GROUP BY O.id;`, pollId)
+WHERE O.poll_id = ? AND confirmed_at IS NOT NULL GROUP BY O.id;`, pollId)
 	if err != nil {
 		log.Println("prepare results error", err)
 		return nil, err
@@ -170,12 +167,12 @@ WHERE O.poll_id = ? AND confirmed = 1 GROUP BY O.id;`, pollId)
 func CheckIfUserHasAlreadyVotedById(userId int, pollId int) (bool, error) {
 	res, err := Db.Query(`
 SELECT
-	V.confirmed
+	V.confirmed_at
 FROM `+TableVotes+` V INNER JOIN `+TableUsers+`
 		U ON V.user_id = U.id
 	INNER JOIN `+TableOptions+` O ON
 		V.option_id = O.id
-WHERE O.poll_id = ? AND V.confirmed = 1 AND U.id = ?;`, pollId, userId)
+WHERE O.poll_id = ? AND V.confirmed_at IS NOT NULL AND U.id = ?;`, pollId, userId)
 	if err != nil {
 		log.Printf("error when checking if user `%d` has already voted on poll `%d`: %v", userId, pollId, err)
 		return false, err
@@ -195,8 +192,8 @@ func InsertToken(token string, voteId int) error {
 	return err
 }
 
-func ChangeConfirmationStatus(voteId int, newStatus bool) error {
-	res, err := Db.Exec("UPDATE "+TableVotes+" SET confirmed = ?, confirmed_at = ? WHERE id = ?;", newStatus, time.Now().Unix(), voteId)
+func ChangeConfirmationStatus(voteId int, confirmedAt int64) error {
+	res, err := Db.Exec("UPDATE "+TableVotes+" SET confirmed_at = ? WHERE id = ?;", confirmedAt, voteId)
 	if err != nil {
 		return err
 	}
