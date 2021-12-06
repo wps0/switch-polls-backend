@@ -67,15 +67,10 @@ func PrepareResponse(data interface{}) ([]byte, error) {
 
 var isAlphaDashUnderscoreRegex = regexp.MustCompile(`^[A-Za-z0-9\-_]+$`)
 var isAlphaDashRegex = regexp.MustCompile(`^[A-Za-z0-9\-]+$`)
-var isAlphaAtDotRegex = regexp.MustCompile(`^[A-Za-z0-9@.]+$`)
 var isAlphaRegex = regexp.MustCompile(`^[A-Za-z0-9]+$`)
 
 func IsAlpha(s string) bool {
 	return isAlphaRegex.MatchString(s)
-}
-
-func IsAlphaWithAtAndDot(s string) bool {
-	return isAlphaAtDotRegex.MatchString(s)
 }
 
 func IsAlphaWithDash(s string) bool {
@@ -91,7 +86,7 @@ func GetListeningAddress() string {
 }
 
 func ValidateUsername(s string) bool {
-	return IsAlpha(s)
+	return IsAlpha(s) && len(s) < 64
 }
 
 func ValidateEmail(email string) error {

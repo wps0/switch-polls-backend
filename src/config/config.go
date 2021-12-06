@@ -31,6 +31,7 @@ type EmailConfiguration struct {
 
 type WebConfiguration struct {
 	CORS                              CORSConfiguration
+	EndpointsLimits                   EndpointsLimits
 	ListeningAddress                  string
 	Domain                            string
 	Port                              uint
@@ -39,6 +40,21 @@ type WebConfiguration struct {
 	RecaptchaVerifyEndpoint           string
 	RecaptchaSecret                   string
 	TokenVerificationRedirectLocation string
+}
+
+type EndpointsLimits struct {
+	Polls PollLimits
+}
+
+type PollLimits struct {
+	PollEndpoint        Limits
+	ResultsEndpoint     Limits
+	VotesEndpoint       Limits
+	ConfirmVoteEndpoint Limits
+}
+
+type Limits struct {
+	MaxBodySize int64
 }
 
 type Configuration struct {
@@ -62,6 +78,22 @@ var defaultConfig = Configuration{
 		CORS: CORSConfiguration{
 			AccessControlAllowOrigin:  "*",
 			AccessControlAllowHeaders: "g-recaptcha-response",
+		},
+		EndpointsLimits: EndpointsLimits{
+			Polls: PollLimits{
+				PollEndpoint: Limits{
+					MaxBodySize: 0,
+				},
+				ResultsEndpoint: Limits{
+					MaxBodySize: 0,
+				},
+				VotesEndpoint: Limits{
+					MaxBodySize: 1024,
+				},
+				ConfirmVoteEndpoint: Limits{
+					MaxBodySize: 0,
+				},
+			},
 		},
 		ApiPrefix:               "/api",
 		RecaptchaVerifyEndpoint: "https://www.google.com/recaptcha/api/siteverify",
