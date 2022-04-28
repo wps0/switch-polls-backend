@@ -74,9 +74,6 @@ func ReadBody(r *http.Request, maxBodySize int) ([]byte, error) {
 	if n > maxBodySize {
 		return nil, errors.New("max body size limit exceeded")
 	}
-	if err != nil && err != io.EOF {
-		return nil, err
-	}
 	return bigBody[:n], nil
 }
 

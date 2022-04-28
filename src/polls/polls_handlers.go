@@ -13,17 +13,17 @@ import (
 )
 
 func PollHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := LimitBodySize(w, r, config.Cfg.WebConfig.EndpointsLimits.Polls.PollEndpoint.MaxBodySize)
+	if err != nil {
+		log.Printf("PollHandler failed to read request body: %v", err)
+		return
+	}
+
 	args := mux.Vars(r)
 	_id, err := strconv.Atoi(args["id"])
 	if err != nil {
 		log.Printf("PollHandler error when converting id to a string: %v", err)
 		WriteBadRequestResponse(&w)
-		return
-	}
-
-	_, err = LimitBodySize(w, r, config.Cfg.WebConfig.EndpointsLimits.Polls.PollEndpoint.MaxBodySize)
-	if err != nil {
-		log.Printf("PollHandler failed to read request body: %v", err)
 		return
 	}
 
@@ -129,6 +129,12 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := LimitBodySize(w, r, config.Cfg.WebConfig.EndpointsLimits.Polls.ConfirmVoteEndpoint.MaxBodySize)
+	if err != nil {
+		log.Printf("PollConfirmHandler error when reading request body %v", err)
+		WriteBadRequestResponse(&w)
+		return
+	}
 	vars := mux.Vars(r)
 	token := vars["token"]
 	if !utils.IsAlphaWithDash(token) {
@@ -137,16 +143,9 @@ func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := VerifyToken(token)
+	err = VerifyToken(token)
 	if err != nil {
 		log.Println("PollConfirmHandler invalid token: ", err)
-		WriteBadRequestResponse(&w)
-		return
-	}
-
-	_, err = ReadBody(r, config.Cfg.WebConfig.EndpointsLimits.Polls.ConfirmVoteEndpoint.MaxBodySize)
-	if err != nil {
-		log.Printf("PollConfirmHandler error when reading request body %v", err)
 		WriteBadRequestResponse(&w)
 		return
 	}
@@ -188,6 +187,12 @@ func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func PollResultsHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := LimitBodySize(w, r, config.Cfg.WebConfig.EndpointsLimits.Polls.ResultsEndpoint.MaxBodySize)
+	if err != nil {
+		log.Printf("PollResultsHandler error when reading request body %v", err)
+		return
+	}
+
 	args := mux.Vars(r)
 	id, _ := strconv.Atoi(args["id"])
 	poll, err := db.PollsRepo.GetPoll(db.Poll{Id: id}, false)
@@ -197,12 +202,6 @@ func PollResultsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if poll == nil {
 		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	_, err = LimitBodySize(w, r, config.Cfg.WebConfig.EndpointsLimits.Polls.ResultsEndpoint.MaxBodySize)
-	if err != nil {
-		log.Printf("PollResultsHandler error when reading request body %v", err)
 		return
 	}
 
