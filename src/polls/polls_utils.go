@@ -66,15 +66,18 @@ func GetConfirmationUrl(token string) string {
 }
 
 func ReadBody(r *http.Request, maxBodySize int) ([]byte, error) {
-	body := make([]byte, maxBodySize+1)
-	n, err := r.Body.Read(body)
+	bigBody := make([]byte, maxBodySize+1)
+	n, err := r.Body.Read(bigBody)
 	if err != nil && err != io.EOF {
 		return nil, err
 	}
 	if n > maxBodySize {
 		return nil, errors.New("max body size limit exceeded")
 	}
-	return body, nil
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+	return bigBody[:n], nil
 }
 
 func LimitBodySize(w http.ResponseWriter, r *http.Request, maxBodySize int) ([]byte, error) {

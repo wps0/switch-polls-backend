@@ -86,7 +86,7 @@ func GetListeningAddress() string {
 }
 
 func ValidateUsername(s string) bool {
-	return IsAlpha(s) && len(s) < 64
+	return IsAlpha(s) && len(s) < 64 && len(s) >= 3
 }
 
 func ValidateEmail(email string) error {

@@ -58,12 +58,14 @@ type Limits struct {
 }
 
 type Configuration struct {
+	DebugMode   bool
 	EmailConfig EmailConfiguration
 	WebConfig   WebConfiguration
 	DbString    string
 }
 
 var defaultConfig = Configuration{
+	DebugMode: false,
 	EmailConfig: EmailConfiguration{
 		OrganizationDomain:    "zsi.kielce.pl",
 		SenderEmail:           "switch@zsi.kielce.pl",
@@ -98,18 +100,16 @@ var defaultConfig = Configuration{
 		ApiPrefix:               "/api",
 		RecaptchaVerifyEndpoint: "https://www.google.com/recaptcha/api/siteverify",
 	},
-	DbString: "username:passwd@tcp(localhost:3306)/mydatabase",
+	DbString: "username:passwd@tcp(localhost:3306)/mydatabase?parseTime=true",
 }
 
 // flags
 var configPath string
-var DevMode bool
 
 func InitConfig() {
 	log.Println("Initialising config...")
 	var err error
 	flag.StringVar(&configPath, "cfg", "./config.json", "The path to the config file.")
-	flag.BoolVar(&DevMode, "dev", false, "Enable development mode.")
 	flag.Parse()
 
 	f, err := os.Open(configPath)
