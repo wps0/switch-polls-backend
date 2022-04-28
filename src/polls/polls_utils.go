@@ -2,6 +2,7 @@ package polls
 
 import (
 	"errors"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -62,4 +63,27 @@ func GetConfirmationUrl(token string) string {
 		port = ":" + strconv.Itoa(int(config.Cfg.WebConfig.Port))
 	}
 	return config.Cfg.WebConfig.Protocol + "://" + config.Cfg.WebConfig.Domain + port + config.Cfg.WebConfig.ApiPrefix + "/polls/confirm_vote/" + token
+}
+
+func ReadBody(r *http.Request, maxBodySize int) ([]byte, error) {
+	body := make([]byte, maxBodySize+1)
+	n, err := r.Body.Read(body)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+	if n > maxBodySize {
+		return nil, errors.New("max body size limit exceeded")
+	}
+	return body, nil
+}
+
+func LimitBodySize(w http.ResponseWriter, r *http.Request, maxBodySize int) ([]byte, error) {
+	b, err := ReadBody(r, maxBodySize)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		resp, _ := utils.PrepareResponse("Invalid request body")
+		w.Write(resp)
+		return nil, err
+	}
+	return b, err
 }

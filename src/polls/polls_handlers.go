@@ -3,7 +3,6 @@ package polls
 import (
 	"encoding/json"
 	"github.com/gorilla/mux"
-	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -22,6 +21,12 @@ func PollHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	_, err = LimitBodySize(w, r, config.Cfg.WebConfig.EndpointsLimits.Polls.PollEndpoint.MaxBodySize)
+	if err != nil {
+		log.Printf("PollHandler failed to read request body: %v", err)
+		return
+	}
+
 	res, err := db.PollsRepo.GetPoll(db.Poll{Id: _id}, true)
 	if err != nil || res == nil || res.Id != _id {
 		w.WriteHeader(http.StatusNotFound)
@@ -37,10 +42,9 @@ func PollHandler(w http.ResponseWriter, r *http.Request) {
 // TODO: db cleanup raz na x h - usuwa, gdy zachodzi jakis warunek (np. uplynal czas od stworzenia / user juz potwierdzil)
 
 func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
+	body, err := LimitBodySize(w, r, config.Cfg.WebConfig.EndpointsLimits.Polls.VotesEndpoint.MaxBodySize)
 	if err != nil {
-		log.Println("Failed to read request body: ", err)
-		WriteBadRequestResponse(&w)
+		log.Printf("PollVoteHandler failed to read request body: %v", err)
 		return
 	}
 
@@ -65,7 +69,7 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 
 	option, err := db.PollsRepo.GetPollOption(db.PollOption{Id: reqData.OptionId}, false) //db.GetPollIdByOptionId(reqData.OptionId)
 	if err != nil || option.PollId <= 0 {
-		log.Println("PollVoteHandler error: ", err)
+		log.Println("PollVoteHandler GetPollOption error: ", err)
 		WriteBadRequestResponse(&w)
 		return
 	}
@@ -81,7 +85,7 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("user has already voted"))
 		return
 	} else if err != nil {
-		log.Println("check if user has voted error", err)
+		log.Println("PollVoteHandler cannot check if user has already voted, error: ", err)
 		WriteBadRequestResponse(&w)
 		return
 	}
@@ -92,7 +96,7 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 		OptionId: reqData.OptionId,
 	})
 	if err != nil {
-		log.Printf("cannot insert the vote of user %s on poll option %d. error: %v", email, reqData.OptionId, err)
+		log.Printf("PollVoteHandler cannot insert the vote of user %s on poll option %d. error: %v", email, reqData.OptionId, err)
 		WriteBadRequestResponse(&w)
 		return
 	}
@@ -115,7 +119,7 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 	})
 	err = utils.SendEmail(&config.Cfg.EmailConfig, config.Cfg.EmailConfig.EmailSubject, template, email)
 	if err != nil {
-		log.Println("cannot send an email to "+email, err)
+		log.Println("PollVoteHandler cannot send an email to "+email, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -127,28 +131,35 @@ func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	token := vars["token"]
 	if !utils.IsAlphaWithDash(token) {
-		log.Println("invalid token format")
+		log.Println("PollConfirmHandler invalid token format")
 		WriteBadRequestResponse(&w)
 		return
 	}
 
 	err := VerifyToken(token)
 	if err != nil {
-		log.Println("invalid token: ", err)
+		log.Println("PollConfirmHandler invalid token: ", err)
+		WriteBadRequestResponse(&w)
+		return
+	}
+
+	_, err = ReadBody(r, config.Cfg.WebConfig.EndpointsLimits.Polls.ConfirmVoteEndpoint.MaxBodySize)
+	if err != nil {
+		log.Printf("PollConfirmHandler error when reading request body %v", err)
 		WriteBadRequestResponse(&w)
 		return
 	}
 
 	cnf, err := db.GetConfirmationByToken(token)
 	if err != nil {
-		log.Println("cannot get confirmation by token", err)
+		log.Println("PollConfirmHandler cannot get confirmation by token", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	err = db.ChangeConfirmationStatus(cnf.VoteId, time.Now().Unix())
 	if err != nil {
-		log.Println("cannot change confirmation status", err)
+		log.Println("PollConfirmHandler cannot change confirmation status", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -156,13 +167,13 @@ func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
 	vote, err := db.VotesRepo.GetVote(db.PollVote{Id: cnf.VoteId})
 	var option db.PollOption
 	if err != nil {
-		log.Println("vote by id error", err)
+		log.Println("PollConfirmHandler vote by id error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	} else {
 		option, err = db.PollsRepo.GetPollOption(db.PollOption{Id: vote.OptionId}, false)
 		if err != nil {
-			log.Println("cannot get pollId by option id when confirming user's vote", err)
+			log.Println("PollConfirmHandler cannot get pollId by option id when confirming user's vote", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -187,9 +198,16 @@ func PollResultsHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+
+	_, err = LimitBodySize(w, r, config.Cfg.WebConfig.EndpointsLimits.Polls.ResultsEndpoint.MaxBodySize)
+	if err != nil {
+		log.Printf("PollResultsHandler error when reading request body %v", err)
+		return
+	}
+
 	summary, err := db.PrepareResultsSummary(poll.Id)
 	if err != nil {
-		log.Println("results summary error", err)
+		log.Println("PollResultsHandler results summary error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

@@ -54,7 +54,7 @@ type PollLimits struct {
 }
 
 type Limits struct {
-	MaxBodySize int64
+	MaxBodySize int
 }
 
 type Configuration struct {
