@@ -1,6 +1,9 @@
 package db
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 type PairIS struct {
 	Input  interface{}
@@ -12,7 +15,7 @@ func TestObjectToSQLConditionAndDontPermitDefault(t *testing.T) {
 		{User{
 			Id:         4,
 			Email:      "232",
-			CreateDate: 213,
+			CreateDate: time.Unix(32323, 332),
 		}, "`id` = ? AND `email` = ? AND `create_date` = ?"},
 		{User{
 			Id:    0,
@@ -36,7 +39,7 @@ func TestObjectToSQLConditionAndPermitDefault(t *testing.T) {
 		{User{
 			Id:         4,
 			Email:      "232",
-			CreateDate: 32131,
+			CreateDate: time.Unix(33332122, 332),
 		}, "`id` = ? AND `email` = ? AND `create_date` = ?"},
 		{User{
 			Id:    0,
@@ -66,7 +69,7 @@ func TestObjectToSQLConditionOrPermitDefault(t *testing.T) {
 		{User{
 			Id:         4,
 			Email:      "232",
-			CreateDate: 32131,
+			CreateDate: time.Unix(10000000, 999),
 		}, "`id` = ? OR `email` = ? OR `create_date` = ?"},
 		{User{
 			Email: "232",

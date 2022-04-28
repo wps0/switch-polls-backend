@@ -12,8 +12,8 @@ import (
 
 func main() {
 	config.InitConfig()
-	if config.DevMode {
-		log.Println("Running the application in development mode.")
+	if config.Cfg.DebugMode {
+		log.Println("Running the application in debug mode.")
 	}
 	db.InitDb()
 	// routing
