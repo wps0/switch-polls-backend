@@ -18,8 +18,7 @@ func main() {
 	db.InitDb()
 	// routing
 	r := mux.NewRouter()
-	r.Use(loggingMiddleware)
-	r.Use(contentTypeJsonMiddleware)
+	r.Use(contentTypeJsonMiddleware, loggingMiddleware)
 
 	// subrouters
 	apiRouter := r.PathPrefix(config.Cfg.WebConfig.ApiPrefix).Subrouter()

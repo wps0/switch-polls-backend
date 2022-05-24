@@ -37,6 +37,7 @@ type WebConfiguration struct {
 	Port                              uint
 	Protocol                          string
 	ApiPrefix                         string
+	RecaptchaMinScore                 float32
 	RecaptchaVerifyEndpoint           string
 	RecaptchaSecret                   string
 	TokenVerificationRedirectLocation string
@@ -98,6 +99,7 @@ var defaultConfig = Configuration{
 			},
 		},
 		ApiPrefix:               "/api",
+		RecaptchaMinScore:       0.51,
 		RecaptchaVerifyEndpoint: "https://www.google.com/recaptcha/api/siteverify",
 	},
 	DbString: "username:passwd@tcp(localhost:3306)/mydatabase?parseTime=true",

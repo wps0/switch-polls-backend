@@ -3,6 +3,8 @@ package utils
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/badoux/checkmail"
+	"github.com/google/uuid"
 	"html/template"
 	"io"
 	"log"
@@ -13,9 +15,6 @@ import (
 	"strconv"
 	"strings"
 	"switch-polls-backend/config"
-
-	"github.com/badoux/checkmail"
-	"github.com/google/uuid"
 )
 
 type InvalidJson struct{}
@@ -39,6 +38,8 @@ type RecaptchaVerifyResponse struct {
 	Success     bool     `json:"success"`
 	ChallengeTs string   `json:"challenge_ts"`
 	Hostname    string   `json:"hostname"`
+	Action      string   `json:"action"`
+	Score       float32  `json:"score"`
 	ErrorCodes  []string `json:"error-codes"`
 }
 
@@ -144,23 +145,24 @@ func VerifyRecaptcha(rq *http.Request) bool {
 		"application/x-www-form-urlencoded",
 		strings.NewReader(data.Encode()))
 	if err != nil {
-		log.Printf("Captcha verification error: %v", err)
+		log.Printf("ReCAPTCHA verification error: %v", err)
 		return false
 	}
 	bodyResp, err := io.ReadAll(res.Body)
 	if err != nil {
-		log.Printf("Captcha verification error: %v", err)
+		log.Printf("ReCAPTCHA verification error: %v", err)
 		return false
 	}
 
 	var resp RecaptchaVerifyResponse
 	err = json.Unmarshal(bodyResp, &resp)
 	if err != nil {
-		log.Printf("Captcha verification error: %v", err)
+		log.Printf("ReCAPTCHA verification error: %v", err)
 		return false
 	}
-	if !resp.Success {
-		log.Println("Captcha verification error(s): ", resp.ErrorCodes)
+	if !resp.Success || resp.Score < config.Cfg.WebConfig.RecaptchaMinScore {
+		log.Printf("Request from %s failed ReCAPTCHA verification (score: %.3f; errors: %v)", rq.RemoteAddr, resp.Score, resp.ErrorCodes)
+		return false
 	}
-	return resp.Success
+	return true
 }
