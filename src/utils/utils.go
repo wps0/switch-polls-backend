@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"github.com/badoux/checkmail"
 	"github.com/google/uuid"
@@ -128,7 +129,7 @@ func FillEmailTemplate(contents EmailTemplateValues) string {
 	return buf.String()
 }
 
-func VerifyRecaptcha(rq *http.Request) bool {
+func VerifyRecaptcha(ctx *context.Context, rq *http.Request) bool {
 	origin := rq.Header.Get("Origin")
 	token := rq.Header.Get("g-recaptcha-response")
 	if len(token) == 0 || len(token) > 1024 || len(origin) > 384 || !IsAlphaWithDashAndUnderscore(token) {
@@ -160,6 +161,8 @@ func VerifyRecaptcha(rq *http.Request) bool {
 		log.Printf("ReCAPTCHA verification error: %v", err)
 		return false
 	}
+	*ctx = context.WithValue(*ctx, "recaptcha", resp)
+
 	if !resp.Success || resp.Score < config.Cfg.WebConfig.RecaptchaMinScore {
 		log.Printf("Request from %s failed ReCAPTCHA verification (score: %.3f; errors: %v)", rq.RemoteAddr, resp.Score, resp.ErrorCodes)
 		return false
