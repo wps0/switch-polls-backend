@@ -13,6 +13,11 @@ import (
 )
 
 func PollHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Context().Value("recaptcha").(utils.RecaptchaVerifyResponse).Action != "poll_get" {
+		log.Printf("PollHandler got invalid recaptcha action from %s", r.RemoteAddr)
+		WriteBadRequestResponse(&w)
+		return
+	}
 	_, err := LimitBodySize(w, r, config.Cfg.WebConfig.EndpointsLimits.Polls.PollEndpoint.MaxBodySize)
 	if err != nil {
 		log.Printf("PollHandler failed to read request body: %v", err)
@@ -43,6 +48,11 @@ func PollHandler(w http.ResponseWriter, r *http.Request) {
 // TODO: db cleanup raz na x h - usuwa, gdy zachodzi jakis warunek (np. uplynal czas od stworzenia / user juz potwierdzil)
 
 func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Context().Value("recaptcha").(utils.RecaptchaVerifyResponse).Action != "poll_vote" {
+		log.Printf("PollVoteHandler got invalid recaptcha action from %s", r.RemoteAddr)
+		WriteBadRequestResponse(&w)
+		return
+	}
 	body, err := LimitBodySize(w, r, config.Cfg.WebConfig.EndpointsLimits.Polls.VotesEndpoint.MaxBodySize)
 	if err != nil {
 		log.Printf("PollVoteHandler failed to read request body: %v", err)
@@ -187,6 +197,11 @@ func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func PollResultsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Context().Value("recaptcha").(utils.RecaptchaVerifyResponse).Action != "poll_results_get" {
+		log.Printf("PollResultsHandler got invalid recaptcha action from %s", r.RemoteAddr)
+		WriteBadRequestResponse(&w)
+		return
+	}
 	_, err := LimitBodySize(w, r, config.Cfg.WebConfig.EndpointsLimits.Polls.ResultsEndpoint.MaxBodySize)
 	if err != nil {
 		log.Printf("PollResultsHandler error when reading request body %v", err)

@@ -35,8 +35,9 @@ func contentTypeJsonMiddleware(next http.Handler) http.Handler {
 
 func recaptchaMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if utils.VerifyRecaptcha(r) {
-			next.ServeHTTP(w, r)
+		ctx := r.Context()
+		if utils.VerifyRecaptcha(&ctx, r) {
+			next.ServeHTTP(w, r.Clone(ctx))
 		} else {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("Invalid recaptcha token"))
