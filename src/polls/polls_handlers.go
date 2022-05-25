@@ -93,7 +93,7 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 	voted, err := db.CheckIfUserHasAlreadyVotedById(user.Id, option.PollId)
 	if voted {
 		w.WriteHeader(http.StatusForbidden)
-		w.Write([]byte("user has already voted"))
+		w.Write([]byte("Użytkownik oddał już głos"))
 		return
 	} else if err != nil {
 		log.Println("PollVoteHandler cannot check if user has already voted, error: ", err)
