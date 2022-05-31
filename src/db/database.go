@@ -2,7 +2,7 @@ package db
 
 import (
 	"database/sql"
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-sql-driver/mysql"
 	"log"
 	"switch-polls-backend/config"
 )
@@ -19,119 +19,35 @@ const (
 	TableConfirmations = TablePrefix + "confirmations"
 )
 
-const (
-	CreateTableUsersQuery = `
-CREATE TABLE IF NOT EXISTS ` + "`" + TableUsers + "`" + ` (
-	id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-	email VARCHAR(128) NOT NULL,
-	create_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	INDEX ix_users_email(email)
-);`
-	CreateTablePollsQuery = `
-CREATE TABLE IF NOT EXISTS ` + "`" + TablePolls + "`" + ` (
-	id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-	title VARCHAR(256) NOT NULL,
-	description VARCHAR(2048) NULL,
-	create_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);`
-	CreateTableOptionsQuery = `
-CREATE TABLE IF NOT EXISTS ` + "`" + TableOptions + "`" + ` (
-	id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-	poll_id INT NOT NULL,
-	content VARCHAR(1024) NOT NULL,
-	INDEX fk_options_poll_ix(poll_id),
-	FOREIGN KEY fk_options_poll_ix(poll_id)
-        REFERENCES ` + TablePolls + `(id)
-        ON DELETE CASCADE
-		ON UPDATE CASCADE
-);`
-	CreateTableExtrasQuery = `
-CREATE TABLE IF NOT EXISTS ` + "`" + TableExtras + "`" + ` (
-	id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-	option_id INT NOT NULL,
-	type VARCHAR(64) NOT NULL,
-	content VARCHAR(2048) NULL,
-	INDEX fk_extras_opt_ix (option_id),
-	FOREIGN KEY fk_extras_opt_ix(option_id)
-        REFERENCES ` + TableOptions + `(id)
-        ON DELETE CASCADE
-		ON UPDATE CASCADE
-);`
-	CreateTableVotesQuery = `
-CREATE TABLE IF NOT EXISTS ` + "`" + TableVotes + "`" + ` (
-	id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-	user_id INT NOT NULL,
-	option_id INT NOT NULL,
-	confirmed_at BIGINT NULL,
-	create_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	INDEX fk_votes_usr_ix (user_id),
-	INDEX fk_votes_opt_ix (option_id),
-	FOREIGN KEY fk_votes_usr_ix(user_id)
-        REFERENCES ` + TableUsers + `(id)
-        ON DELETE CASCADE
-		ON UPDATE CASCADE,
-	FOREIGN KEY fk_votes_opt_ix(option_id)
-        REFERENCES ` + TableOptions + `(id)
-        ON DELETE CASCADE
-		ON UPDATE CASCADE
-);`
-	CreateTableVoteConfirmationsQuery = `
-CREATE TABLE IF NOT EXISTS ` + "`" + TableConfirmations + "`" + ` (
-	token VARCHAR(192) NOT NULL PRIMARY KEY,
-	vote_id INT NOT NULL,
-	create_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	INDEX fk_confirmations_vote_id_ix (vote_id),
-	FOREIGN KEY fk_confirmations_vote_id_ix(vote_id)
-        REFERENCES ` + TableVotes + `(id)
-        ON DELETE CASCADE
-		ON UPDATE CASCADE
-);`
-)
+func OpenDbInstance() *sql.DB {
+	c, err := mysql.ParseDSN(config.Cfg.DbString)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	c.ParseTime = true
+	c.MultiStatements = true
+	db, err := sql.Open("mysql", c.FormatDSN())
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	return db
+}
 
 func InitDb() {
 	log.Println("Initialising database...")
 	if config.Cfg.DebugMode {
 		log.Printf("Logging in with %s...", config.Cfg.DbString)
 	}
-	db, err := sql.Open("mysql", config.Cfg.DbString)
-	if err != nil {
-		panic(err.Error())
-	}
-	Db = db
-
-	_, err = Db.Exec(CreateTableUsersQuery)
-	if err != nil {
-		panic(err)
-	}
-	_, err = Db.Exec(CreateTablePollsQuery)
-	if err != nil {
-		panic(err)
-	}
-	_, err = Db.Exec(CreateTableOptionsQuery)
-	if err != nil {
-		panic(err)
-	}
-	_, err = Db.Exec(CreateTableExtrasQuery)
-	if err != nil {
-		panic(err)
-	}
-	_, err = Db.Exec(CreateTableVotesQuery)
-	if err != nil {
-		panic(err)
-	}
-	_, err = Db.Exec(CreateTableVoteConfirmationsQuery)
-	if err != nil {
-		panic(err)
-	}
+	Db = OpenDbInstance()
 	log.Println("Database initialised.")
 	log.Println("Initialising repositories...")
 
 	UsersRepo = NewMySQLUsersRepository()
 	PollsRepo = NewMySQLPollsRepository()
 	VotesRepo = NewMySQLVotesRepository()
-	UsersRepo.Init(db)
-	PollsRepo.Init(db)
-	VotesRepo.Init(db)
+	UsersRepo.Init(Db)
+	PollsRepo.Init(Db)
+	VotesRepo.Init(Db)
 	log.Println("Repositories initialised.")
 }
 
