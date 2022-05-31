@@ -24,7 +24,7 @@ func (m *MySQLPollsRepository) GetPoll(cond Poll, recursiveMode bool) (*Poll, er
 	row := m.Db.QueryRow("SELECT * FROM "+TablePolls+" WHERE "+condition+";", values...)
 
 	var poll Poll
-	if err := row.Scan(&poll.Id, &poll.Title, &poll.Description, &poll.CreateTime); err != nil {
+	if err := row.Scan(&poll.Id, &poll.Title, &poll.Description, &poll.CreateDate, &poll.IsReadonly); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("GetPoll: poll %v not found", cond)
 		}

@@ -26,6 +26,10 @@ func OpenDbInstance() *sql.DB {
 	}
 	c.ParseTime = true
 	c.MultiStatements = true
+	if config.Cfg.DebugMode {
+		log.Printf("Logging in with %s...", c.FormatDSN())
+	}
+
 	db, err := sql.Open("mysql", c.FormatDSN())
 	if err != nil {
 		log.Fatal(err.Error())
@@ -35,9 +39,6 @@ func OpenDbInstance() *sql.DB {
 
 func InitDb() {
 	log.Println("Initialising database...")
-	if config.Cfg.DebugMode {
-		log.Printf("Logging in with %s...", config.Cfg.DbString)
-	}
 	Db = OpenDbInstance()
 	log.Println("Database initialised.")
 	log.Println("Initialising repositories...")
