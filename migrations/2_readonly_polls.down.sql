@@ -1,0 +1,1 @@
+ALTER TABLE `spolls_polls` DROP COLUMN is_readonly;

@@ -34,6 +34,9 @@ func VerifyToken(token string) error {
 	if !utils.IsAlphaWithDash(token) {
 		return errors.New("invalid character in token")
 	}
+	if len(token) != 36 {
+		return errors.New("the token is of invalid length (" + strconv.Itoa(len(token)) + " chars)")
+	}
 
 	cnf, err := db.GetConfirmationByToken(token)
 	if err != nil {

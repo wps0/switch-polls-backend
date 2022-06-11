@@ -3,10 +3,13 @@ package config
 import (
 	"encoding/json"
 	"flag"
+	"github.com/go-sql-driver/mysql"
 	"io/ioutil"
 	"log"
 	"os"
 )
+
+const MigrationsPathRelative = "migrations"
 
 var Cfg *Configuration
 
@@ -59,10 +62,11 @@ type Limits struct {
 }
 
 type Configuration struct {
-	DebugMode   bool
-	EmailConfig EmailConfiguration
-	WebConfig   WebConfiguration
-	DbString    string
+	DebugMode      bool
+	EmailConfig    EmailConfiguration
+	WebConfig      WebConfiguration
+	DbString       string
+	DatabaseConfig *mysql.Config `json:"-"`
 }
 
 var defaultConfig = Configuration{
@@ -140,6 +144,7 @@ func InitConfig() {
 }
 
 func createConfig(path string) {
+	log.Printf("Creating config file in %s...", path)
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0740)
 	defer f.Close()
 	if err != nil {
@@ -157,6 +162,12 @@ func createConfig(path string) {
 		log.Fatalf("Failed to create config file! Error: %s\n", err)
 		return
 	}
+	_, err = os.Stat(path)
+	if err != nil {
+		log.Fatalf("Failed to stat config file! Error: %s\n", err)
+		return
+	}
+	log.Println("Config created!")
 }
 
 func loadConfiguration(path string) (*Configuration, error) {
@@ -172,6 +183,10 @@ func loadConfiguration(path string) (*Configuration, error) {
 		return nil, err
 	}
 
+	conf.DatabaseConfig, err = mysql.ParseDSN(conf.DbString)
+	if err != nil {
+		return nil, err
+	}
 	loadEmailTemplate(conf, conf.EmailConfig.EmailTemplatePath)
 	return conf, nil
 }

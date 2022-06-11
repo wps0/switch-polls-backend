@@ -11,10 +11,12 @@ import (
 )
 
 func main() {
+	log.Println("---- Switch polls backend is starting... ----")
 	config.InitConfig()
 	if config.Cfg.DebugMode {
 		log.Println("Running the application in debug mode.")
 	}
+	db.ApplyMigrations()
 	db.InitDb()
 	// routing
 	r := mux.NewRouter()

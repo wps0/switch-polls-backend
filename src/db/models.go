@@ -24,7 +24,8 @@ type Poll struct {
 	Title       string       `json:"title" db:"title"`
 	Description string       `json:"description" db:"description"`
 	Options     []PollOption `json:"options" db:"-"`
-	CreateTime  time.Time    `json:"-" db:"create_time"`
+	CreateDate  time.Time    `json:"-" db:"create_date"`
+	IsReadonly  bool         `json:"is_readonly" db:"is_readonly"`
 }
 
 type PollVote struct {
