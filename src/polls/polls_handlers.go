@@ -56,6 +56,7 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := LimitBodySize(w, r, config.Cfg.WebConfig.EndpointsLimits.Polls.VotesEndpoint.MaxBodySize)
 	if err != nil {
 		log.Printf("PollVoteHandler failed to read request body: %v", err)
+		WriteBadRequestResponse(&w)
 		return
 	}
 
@@ -82,6 +83,19 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil || option.PollId <= 0 {
 		log.Println("PollVoteHandler GetPollOption error: ", err)
 		WriteBadRequestResponse(&w)
+		return
+	}
+
+	poll, err := db.PollsRepo.GetPoll(db.Poll{Id: option.PollId}, false)
+	if err != nil {
+		log.Printf("PollVoteHandler cannot get the poll with id %d, vote request by user %s on option %d, error: %v", option.PollId, email, option.PollId, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if poll.IsReadonly {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Ta ankieta nie przyjmuje już głosów."))
 		return
 	}
 
@@ -113,13 +127,6 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	token, err := CreateVoteToken(vote.Id)
 
-	poll, err := db.PollsRepo.GetPoll(db.Poll{Id: option.PollId}, false)
-	if err != nil {
-		log.Printf("PollVoteHandler cannog get the poll with id %v - vote request by user %s on option option %d. error: %v", option.PollId, email, reqData.OptionId, err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
 	template := utils.FillEmailTemplate(utils.EmailTemplateValues{
 		Receiver:    email,
 		ServiceName: "SWITCH POLLS",
@@ -135,7 +142,7 @@ func PollVoteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	w.WriteHeader(http.StatusCreated)
 }
 
 func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
@@ -167,6 +174,20 @@ func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	vote, _ := db.VotesRepo.GetVote(db.PollVote{Id: cnf.VoteId})
+	option, _ := db.PollsRepo.GetPollOption(db.PollOption{Id: vote.OptionId}, false)
+	poll, err := db.PollsRepo.GetPoll(db.Poll{Id: option.PollId}, false)
+	if err != nil {
+		log.Printf("PollConfirmHandler cannot get the poll with id %d, vote request by user %d, error: %v", option.PollId, vote.UserId, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if poll.IsReadonly {
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte("Ta ankieta nie przyjmuje już głosów."))
+		return
+	}
+
 	err = db.ChangeConfirmationStatus(cnf.VoteId, time.Now().Unix())
 	if err != nil {
 		log.Println("PollConfirmHandler cannot change confirmation status", err)
@@ -174,24 +195,9 @@ func PollConfirmHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vote, err := db.VotesRepo.GetVote(db.PollVote{Id: cnf.VoteId})
-	var option db.PollOption
-	if err != nil {
-		log.Println("PollConfirmHandler vote by id error", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	} else {
-		option, err = db.PollsRepo.GetPollOption(db.PollOption{Id: vote.OptionId}, false)
-		if err != nil {
-			log.Println("PollConfirmHandler cannot get pollId by option id when confirming user's vote", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-	}
-
 	res, _ := utils.PrepareResponse("Zarejestrowano glos!")
 	// TODO: use templates instead of gluing the id to the end
-	w.Header().Set("Location", config.Cfg.WebConfig.TokenVerificationRedirectLocation+strconv.Itoa(option.PollId))
+	w.Header().Set("Location", config.Cfg.WebConfig.TokenVerificationRedirectLocation+strconv.Itoa(poll.Id))
 	w.WriteHeader(http.StatusSeeOther)
 	w.Write(res)
 }
